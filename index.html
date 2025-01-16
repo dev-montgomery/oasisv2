@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./styles/styles.css">
+  <!-- <link rel="icon" href="./favicon.ico" type="image/x-icon"> -->
+  <title>Oasis</title>
+</head>
+<body>
+  <div class="loading-container noselect">
+    <div class="loading-progress"></div>
+  </div>
+
+  <div class="form-container hidden">
+    <form action="login" method="POST" id="login-form">
+      <fieldset>
+        <legend>Enter the Oasis</legend>
+        <label for="playername">Playername:</label>
+        <input type="text" id="playername" name="playername" autocomplete="off" minlength="3" maxlength="14" required>
+        <button id="login-btn" type="submit">submit</button>
+      </fieldset>
+    </form>
+  </div>
+
+  <div class="game-container hidden">
+    <div class="playerdata-container noselect"></div>
+    <canvas></canvas>
+  </div>
+  
+  <script type="module" src="./index.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+{
+  "items":[
+    {
+      "id": "weapon_sword",
+      "name": "gladius",
+      "type": "weapon",
+      "category": "equippable",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "A basic iron sword. Durable and reliable.",
+      "value": 100
+    },
+    {
+      "id": "weapon_twin_axe",
+      "name": "twin axe",
+      "type": "weapon",
+      "category": "equippable",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "Two heads are better than one.",
+      "value": 100
+    },
+    {
+      "id": "weapon_wood_cudgel",
+      "name": "wood cudgel",
+      "type": "weapon",
+      "category": "equippable",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "The perfect piece of wood.",
+      "value": 100
+    },
+    {
+      "id": "weapon_spear",
+      "name": "spear",
+      "type": "weapon",
+      "category": "equippable",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "An iron tipped spear, great for spearing.",
+      "value": 100
+    },
+    {
+      "id": "weapon_handwraps",
+      "name": "hand wraps",
+      "type": "weapon",
+      "category": "equippable",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "Fine fabric for your fists in a fight.",
+      "value": 100
+    }
+  ]
+}
