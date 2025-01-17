@@ -8,7 +8,7 @@ class Resources {
 
     this.mapData = {};
     this.playerData = {};
-    // this.itemData = {};
+    this.itemData = {};
 
     this.loadData();
   };
@@ -26,7 +26,7 @@ class Resources {
       await Promise.all([
         this.loadMapData(),
         this.loadPlayerData(),
-        // this.loadItemData()
+        this.loadItemData()
       ]);
       console.log('All data loaded successfully.');
     } catch (error) {
@@ -71,10 +71,10 @@ class Resources {
     return newPlayer;
   };
 
-  // async loadItemData() {
-  //   this.itemData = await this.fetchJson('item_data/items.json');
-  //   this.itemData.isLoaded = true;
-  // };
+  async loadItemData() {
+    this.itemData = await this.fetchJson('item_data/items.json');
+    this.itemData.isLoaded = true;
+  };
 };
 
 export const resources = new Resources();

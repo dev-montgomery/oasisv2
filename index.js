@@ -1,6 +1,9 @@
 import { resources } from './src/resources.js';
 import { Player } from './src/class.js';
 
+// put in .dotenv file
+const API_URL = 'http://localhost:3000/playerdata';
+
 const game = document.querySelector('.game-container');
 game.on = false;
 
@@ -28,43 +31,60 @@ const panelAssets = {
   src: './backend/assets/assets-inventory.png',  
 };
 
+// init player, populate player data, update player data
 const player = new Player({});
 
-// handle login/transition to game
-const handleLogin = async e => {
+// handle form
+const handleLogin = async (e) => {
   e.preventDefault();
   
-  const form = document.querySelector('.form-container');
-  const playerName = document.querySelector('#playername').value;
+  const playerName = document.querySelector('#playername').value.trim();
   player.data = resources.createPlayer(playerName);
 
-  console.log(player.data)
-  // await new Promise((resolve) => {
-  //   const checkInterval = setInterval(() => {
-  //     if (typeof resources !== 'undefined') {
-  //       clearInterval(checkInterval);
-  //       resolve();
-  //     };
-  //   }, 100);
-  // });
+  console.log(player.data);
 
-  // game.on = true;
+  setTimeout(() => {
+    // if (genus.loaded && player.loaded) {
+      const form = document.querySelector('.form-container');
+      form.style.display = 'none';
+      form.blur();
+    // };
+  }, 500);
+};
 
-  // a half second between form submission and game because the instant transition feels weird
-  // setTimeout(() => {
-  //   if (game.on) {
-      // document.querySelector('body').style.background = '#464646';
-      // canvas.style.background = 'transparent';
+// update player data
+const updateLocalPlayerData = () => {
+  const playerToUpdateIndex = resources.playerData.playerlist.findIndex(user => user.id === player.data.id);
+  if (playerToUpdateIndex !== -1) {
+    resources.playerData.playerlist[playerToUpdateIndex] = player.data;
+  } else {
+    console.warn('New player added.');
+    resources.playerData.playerlist.push(player.data);
+  };
+};
 
-      // form.style.display = 'none';
-      // form.blur();
-      
-      // game.classList.remove('hidden');
-      // game.style.display = 'flex';
-      // game.on = true;
-  //     console.log(player.data)
-  //   };
-  // }, 500);
+const postPlayerData = async (data) => {
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save player data. Server error.');
+    };
+
+  } catch(error) {
+    console.error('Error saving player data:', error.message);
+  };
+};
+
+const updateAndPostPlayerData = async () => {
+  updateLocalPlayerData();
+  await postPlayerData(resources.playerData);
 };
 
 // event listeners -----------------------------------------------
@@ -72,8 +92,8 @@ addEventListener("DOMContentLoaded", e => {
   // handleDOMContentLoaded();
   
   document.querySelector('#login-form').addEventListener('submit', handleLogin, { once: true });
-
-  // addEventListener('beforeunload', async (e) => {
-  //   await updateAndPostPlayerData();
-  // });
+  
+  addEventListener('beforeunload', async (e) => {
+    await updateAndPostPlayerData();
+  });
 });
