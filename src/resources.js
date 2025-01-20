@@ -54,6 +54,7 @@ class Resources {
   };
 
   createPlayer(playername) {
+    if (this.playerData.playerlist[0] === null) this.playerData.playerlist.pop();
     if (this.playerExists(playername)) {
       console.log(`Logged in as ${playername}.`);
       const returningPlayer = this.playerData.playerlist.find(player => player.name === playername);

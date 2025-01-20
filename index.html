@@ -17,7 +17,17 @@
       <fieldset>
         <legend>Enter the Oasis</legend>
         <label for="playername">Playername:</label>
-        <input type="text" id="playername" name="playername" autocomplete="off" minlength="3" maxlength="14" required>
+        <input 
+          type="text" 
+          id="playername" 
+          name="playername" 
+          autocomplete="off" 
+          minlength="3" 
+          maxlength="14" 
+          pattern="^[A-Za-z]+( [A-Za-z]+)*$" 
+          title="Only letters are allowed." 
+          required
+        >
         <button id="login-btn" type="submit">submit</button>
       </fieldset>
     </form>

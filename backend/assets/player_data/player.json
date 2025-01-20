@@ -2,65 +2,11 @@
   "playerlist": [
     {
       "id": 1,
-      "name": "Riker",
-      "details": {
-        "location": {
-          "x": 93,
-          "y": 142
-        },
-        "lvls": {
-          "lvl": 0,
-          "mglvl": 0
-        },
-        "stats": {
-          "health": 20,
-          "magic": 10,
-          "capacity": 50,
-          "speed": 1
-        },
-        "skills": {
-          "fist": 0,
-          "sword": 0,
-          "axe": 0,
-          "blunt": 0,
-          "distance": 0,
-          "defense": 0,
-          "fishing": 0
-        },
-        "experience": {
-          "currentxp": 0,
-          "currentmgxp": 0,
-          "fistxp": 0,
-          "swordxp": 0,
-          "axexp": 0,
-          "bluntxp": 0,
-          "distancexp": 0,
-          "defensexp": 0,
-          "fishingxp": 0
-        },
-        "equipped": {
-          "neck": "empty",
-          "head": "empty",
-          "back": "empty",
-          "mainhand": "empty",
-          "chest": "empty",
-          "offhand": "empty",
-          "hands": "empty",
-          "legs": "empty",
-          "feet": "empty"
-        },
-        "inventory": [],
-        "depot": [],
-        "stance": "defensive"
-      }
-    },
-    {
-      "id": 2,
       "name": "Maddox",
       "details": {
         "location": {
-          "x": 93,
-          "y": 142
+          "x": 155,
+          "y": 188
         },
         "lvls": {
           "lvl": 0,
@@ -111,8 +57,8 @@
   ],
   "newplayer": {
     "location": {
-      "x": 93,
-      "y": 142
+      "x": 155,
+      "y": 188
     },
     "lvls": {
       "lvl": 0,

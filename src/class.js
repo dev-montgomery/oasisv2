@@ -1,10 +1,10 @@
 // Base class for objects with common properties
 class GameObject {
-  constructor({ src, source, coordinates, size }) {
+  constructor({ src, size }) {
     this.image = new Image();
     this.image.src = src || '';
-    this.source = source || '';
-    this.coordinates = coordinates || '';
+    // this.source = source || '';
+    // this.coordinates = coordinates || '';
     this.size = size || 64;
   };
 
@@ -18,27 +18,30 @@ class GameObject {
 };
 
 export class Player extends GameObject {
-  constructor({ source, coordinates }) {
-    super({ src: '../backend/assets/player_data/assets-player.png', source, coordinates });
-    // this.direction = { sx: 0, sy: 0 };
-    // this.offset = 16;
-    // this.speed = 500;
-    // this.cooldown = false;
+  constructor({ sprite }) {
+    super({ src: '../backend/assets/player_data/assets-player.png', sprite })
+    const { x, y } = sprite;
+    this.x = x;
+    this.y = y;
+    this.drawTo = { 
+      x: screen.width * 0.5 - 128, 
+      y: screen.height * 0.5 - 128
+    };
   };
 
-  // draw = (ctx) => {
-  //   ctx.drawImage(
-  //     this.image,
-  //     this.direction.sx,
-  //     this.direction.sy,
-  //     this.size,
-  //     this.size,
-  //     this.coordinates.dx,
-  //     this.coordinates.dy,
-  //     this.size,
-  //     this.size
-  //   );
-  // };
+  draw = (ctx) => {
+    ctx.drawImage(
+      this.image,
+      this.x,
+      this.y,
+      this.size + 64,
+      this.size + 64,
+      this.drawTo.x,
+      this.drawTo.y - 64,
+      this.size + 64,
+      this.size + 64
+    );
+  };
 };
 
 // export class Tile extends GameObject {
