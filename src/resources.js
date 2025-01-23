@@ -8,7 +8,7 @@ class Resources {
 
     this.mapData = {};
     this.playerData = {};
-    // this.itemData = {};
+    this.itemData = {};
 
     this.loadData();
   };
@@ -26,7 +26,7 @@ class Resources {
       await Promise.all([
         this.loadMapData(),
         this.loadPlayerData(),
-        // this.loadItemData()
+        this.loadItemData()
       ]);
       console.log('All data loaded successfully.');
     } catch (error) {
@@ -54,6 +54,7 @@ class Resources {
   };
 
   createPlayer(playername) {
+    if (this.playerData.playerlist[0] === null) this.playerData.playerlist.pop();
     if (this.playerExists(playername)) {
       console.log(`Logged in as ${playername}.`);
       const returningPlayer = this.playerData.playerlist.find(player => player.name === playername);
@@ -71,10 +72,10 @@ class Resources {
     return newPlayer;
   };
 
-  // async loadItemData() {
-  //   this.itemData = await this.fetchJson('item_data/items.json');
-  //   this.itemData.isLoaded = true;
-  // };
+  async loadItemData() {
+    this.itemData = await this.fetchJson('item_data/items.json');
+    this.itemData.isLoaded = true;
+  };
 };
 
 export const resources = new Resources();
