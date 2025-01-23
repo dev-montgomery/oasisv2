@@ -1,77 +1,38 @@
-// Base class for objects with common properties
-class GameObject {
-  constructor({ src, size }) {
+export class Player {
+  constructor() {
     this.image = new Image();
-    this.image.src = src || '';
-    // this.source = source || '';
-    // this.coordinates = coordinates || '';
-    this.size = size || 64;
+    this.image.src = '../backend/assets/player_data/assets-player.png';
+    this.pixels = 64;
+    this.speed = 1;
+    this.direction = 'down';
+    this.cooldown = false;
+    this.drawTo = { 
+      x: window.innerWidth * 0.5 - 128,
+      y: window.innerHeight * 0.5 - 128 
+    };
   };
 
-  // Ensure that the image is loaded
-  loadImage = () => {
+  loadImage() {
     return new Promise((resolve, reject) => {
-      this.image.onload = resolve;
-      this.image.onerror = reject;
+      this.image.onload = () => resolve(this.image);
+      this.image.onerror = () => reject(new Error('Failed to load player image.'));
     });
   };
 };
 
-export class Player extends GameObject {
-  constructor({ sprite }) {
-    super({ src: '../backend/assets/player_data/assets-player.png', sprite })
-    const { x, y } = sprite;
-    this.x = x;
-    this.y = y;
-    this.drawTo = { 
-      x: screen.width * 0.5 - 128, 
-      y: screen.height * 0.5 - 128
-    };
+export class Area {
+  constructor() {
+    this.image = new Image();
+    this.image.src = './backend/assets/map_data/assets-map.png';
+    this.frames = 20;
+    this.pixels = 64;
+    this.mapDimensions = { row: 200, col: 200 };
   };
 
-  draw = (ctx) => {
-    ctx.drawImage(
-      this.image,
-      this.x,
-      this.y,
-      this.size + 64,
-      this.size + 64,
-      this.drawTo.x,
-      this.drawTo.y - 64,
-      this.size + 64,
-      this.size + 64
-    );
+  loadImage() {
+    return new Promise((resolve, reject) => {
+      this.image.onload = () => resolve(this.image);
+      this.image.onerror = () => reject(new Error('Failed to load area image.'));
+    });
   };
 };
-
-// export class Tile extends GameObject {
-//   constructor({ source, coordinates }) {
-//     super({ src: '../backend/assets/map_data/spritesheet-genus.png', source, coordinates });
-//   };
-// };
-
-// export class Item extends GameObject {
-//   constructor(id, type, name, { source, coordinates }, scale) {
-//     super({ src: '../backend/assets/item_data/items.png', source, coordinates });
-//     this.id = id;
-//     this.type = type;
-//     this.name = name;
-//     this.scale = scale;
-//     this.size = 64;
-//     this.isDragging = false;
-//   };
-
-//   draw = (ctx) => {
-//     ctx.drawImage(
-//       this.image,
-//       this.source.sx,
-//       this.source.sy,
-//       this.size,
-//       this.size,
-//       this.coordinates.dx,
-//       this.coordinates.dy,
-//       this.size * this.scale,
-//       this.size * this.scale
-//     );
-//   };
-// };
