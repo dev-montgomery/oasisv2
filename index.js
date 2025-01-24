@@ -1,9 +1,12 @@
-import { resources } from './src/resources.js';
-import { Player, Area } from './src/class.js';
+import { resources } from './src/utils/resources.js';
+import { Player, Area } from './src/utils/classes.js';
 
 const API_URL = 'http://localhost:3000/playerdata';
+
 const game = document.querySelector('.game-container');
 game.on = false;
+
+const chat = { open: false };
 
 // canvas and context and screen sizes ------------------------------------------
 const canvas = document.querySelector('canvas');
@@ -11,20 +14,83 @@ const ctx = canvas.getContext('2d');
 
 canvas.width = 1024;
 canvas.height = 704;
-canvas.panelwidth = 192;
+canvas.uiElementsWidth = 192;
 
 const screen = { 
   frames: { row: 11, col: 13 }, 
-  width: canvas.width - canvas.panelwidth, 
+  width: canvas.width - canvas.uiElementsWidth, 
   height: canvas.height 
 };
 
 // init assets ------------------------------------------------------------------
 const player = new Player();
 const area = new Area();
-// const panel assets
-// const item assets
-// const creature assets
+// const uiElements = new UiElements();
+// const items = new Items();
+// const creatures = new Creatures();
+
+// contains all draw functions --------------------------------------------------
+const drawAll = () => {
+  // Draw the map (background) and Player
+  drawArea();
+
+  // Draw all non-player items like objects or enemies
+  // items.forEach(item => item.draw(ctx));
+
+  // Draw UI elements last so they appear on top
+  // uiElements.forEach(ui => ui.draw(ctx));
+};
+
+// draw player ------------------------------------------------------------------
+const playerMove = (e) => {
+  if (!game.on || chat.open || player.cooldown) {
+    return;
+  };
+
+  const down = { x: 0, y: 128 };
+  const up = { x: 128, y: 128 };
+  const left = { x: 256, y: 128 };
+  const right = { x: 384, y: 128 };
+
+  const KEY_W = 'w';
+  const KEY_S = 's';
+  const KEY_A = 'a';
+  const KEY_D = 'd';
+
+  switch (e.key) {
+    case KEY_W:
+      player.direction = up;
+      player.data.details.location.y -= 1;
+      break;
+
+    case KEY_S:
+      player.direction = down;
+      player.data.details.location.y += 1;
+      break;
+
+    case KEY_A:
+      player.direction = left;
+      player.data.details.location.x -= 1;
+      break;
+
+    case KEY_D:
+      player.direction = right;
+      player.data.details.location.x += 1;
+      break;
+
+    default:
+      return;
+  };
+
+  // if (!collisionDetect(dx, dy)) {
+  //   updateWorldLocations(valX, valY);
+  // };
+  
+  player.cooldown = true;
+  setTimeout(() => {
+    player.cooldown = false;
+  }, player.speed * 1000);
+};
 
 // draw map ---------------------------------------------------------------------
 const drawTile = (image, { sx, sy, dx, dy }) => {
@@ -64,23 +130,19 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
         const sy = Math.floor((tileID - 1) / 20) * area.pixels; // Source y on spritesheet
         const dx = Math.floor(i % screen.frames.col) * area.pixels; // Destination x on canvas
         const dy = Math.floor(i / screen.frames.col) * area.pixels; // Destination y on canvas
-        const tileData = { sx, sy, dx, dy, size: area.pixels };
+        const tileData = { sx, sy, dx, dy };
   
         if (tileID === 10 || tileID === 11) {
-          // Boundary layer
-          boundaries.push(tileData); // Save boundary tiles, but do not draw them
+          boundaries.push(tileData); // use for collision detection
         } else {
           if (waterTileIDs.includes(tileID)) {
-            // Save water tiles and draw them first
-            wateries.push(tileData);
+            wateries.push(tileData); // potentially alternate tiles to simulate "shimmering"
             drawTile(area.image, tileData);
           } else if (!upperTileIDs.includes(tileID)) {
-            // Draw ground tiles (non-upper, non-water tiles)
             drawTile(area.image, tileData);
           };
   
           if (upperTileIDs.includes(tileID)) {
-            // Save upper tiles and defer drawing until later
             uppermost.push(tileData);
           };
         };
@@ -88,6 +150,9 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
     });
   });
   
+  // Draw player before uppermost layer
+  player.draw(ctx);
+
   // Draw upper tiles after all others
   uppermost.forEach(tileData => {
     drawTile(area.image, tileData);
@@ -106,13 +171,16 @@ const handleLogin = async (e) => {
   const playerName = capitalizeWords(nameInput);
   player.data = resources.createPlayer(playerName);
 
+  console.log(player)
   setTimeout(() => {
     const form = document.querySelector('.form-container');
     form.style.display = 'none';
     form.blur();
+    game.on = true;
+    // Start the game loop
+    gameLoop();
   }, 500);
 
-  drawArea();
 };
 
 // update player data -----------------------------------------------------------
@@ -153,10 +221,37 @@ const updateAndPostPlayerData = async () => {
 // event listeners --------------------------------------------------------------
 addEventListener("DOMContentLoaded", e => {  
   document.querySelector('#login-form').addEventListener('submit', handleLogin, { once: true });
-  
+
+  addEventListener('keydown', playerMove);
+
   // window.addEventListener('resize', resizeCanvas);
 
   addEventListener('beforeunload', async (e) => {
     await updateAndPostPlayerData();
   });
 });
+
+// Game Loop --------------------------------------------------------------------
+function gameLoop() {
+  // Clear the canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Update game logic
+
+  // Draw functions
+  drawAll();
+  // drawAll(ctx, player, map, items, uiElements);
+
+  // Call the next frame
+  requestAnimationFrame(gameLoop);
+};
+
+/*
+
+Load UI class
+Figure out my layers, move player to top layers, and uppermost above that.
+Detect collision tiles
+Add depots to a depot array
+Work on UI section
+
+*/
