@@ -1,5 +1,5 @@
-import { resources } from './src/resources.js';
-import { Player, Area } from './src/class.js';
+import { resources } from './src/utils/resources.js';
+import { Player, Area } from './src/utils/classes.js';
 
 const API_URL = 'http://localhost:3000/playerdata';
 
@@ -248,6 +248,7 @@ function gameLoop() {
 
 /*
 
+Load UI class
 Figure out my layers, move player to top layers, and uppermost above that.
 Detect collision tiles
 Add depots to a depot array
