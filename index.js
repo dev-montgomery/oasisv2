@@ -1,5 +1,5 @@
 import { resources } from './src/utils/resources.js';
-import { Player, Area } from './src/utils/classes.js';
+import { Player, Area, UiElements, Items, Creatures } from './src/utils/classes.js';
 
 const API_URL = 'http://localhost:3000/playerdata';
 
@@ -12,22 +12,23 @@ const chat = { open: false };
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
 
-canvas.width = 1024;
+canvas.width = 1024 + 4; // inelegant... using a 4 pixel offset between screen and ui
 canvas.height = 704;
-canvas.uiElementsWidth = 192;
+const uiWidth = 192;
 
-const screen = { 
+const screen = {
   frames: { row: 11, col: 13 }, 
-  width: canvas.width - canvas.uiElementsWidth, 
+  width: canvas.width - uiWidth, 
   height: canvas.height 
 };
 
 // init assets ------------------------------------------------------------------
 const player = new Player();
 const area = new Area();
-// const uiElements = new UiElements();
-// const items = new Items();
-// const creatures = new Creatures();
+const uiElements = new UiElements();
+const items = new Items();
+const creatures = new Creatures();
+// const animations = new Animations();
 
 // contains all draw functions --------------------------------------------------
 const drawAll = () => {
@@ -38,58 +39,7 @@ const drawAll = () => {
   // items.forEach(item => item.draw(ctx));
 
   // Draw UI elements last so they appear on top
-  // uiElements.forEach(ui => ui.draw(ctx));
-};
-
-// draw player ------------------------------------------------------------------
-const playerMove = (e) => {
-  if (!game.on || chat.open || player.cooldown) {
-    return;
-  };
-
-  const down = { x: 0, y: 128 };
-  const up = { x: 128, y: 128 };
-  const left = { x: 256, y: 128 };
-  const right = { x: 384, y: 128 };
-
-  const KEY_W = 'w';
-  const KEY_S = 's';
-  const KEY_A = 'a';
-  const KEY_D = 'd';
-
-  switch (e.key) {
-    case KEY_W:
-      player.direction = up;
-      player.data.details.location.y -= 1;
-      break;
-
-    case KEY_S:
-      player.direction = down;
-      player.data.details.location.y += 1;
-      break;
-
-    case KEY_A:
-      player.direction = left;
-      player.data.details.location.x -= 1;
-      break;
-
-    case KEY_D:
-      player.direction = right;
-      player.data.details.location.x += 1;
-      break;
-
-    default:
-      return;
-  };
-
-  // if (!collisionDetect(dx, dy)) {
-  //   updateWorldLocations(valX, valY);
-  // };
-  
-  player.cooldown = true;
-  setTimeout(() => {
-    player.cooldown = false;
-  }, player.speed * 1000);
+  drawUi();
 };
 
 // draw map ---------------------------------------------------------------------
@@ -159,6 +109,114 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
   });
 };
 
+// draw ui elements -------------------------------------------------------------
+const drawUi = () => {
+  const { image, pixels, top, inventory, toggle, stance, state } = uiElements;
+  const uiXOffset = screen.width + 4; // Add 4-pixel gap from the screen width
+
+  // Clear UI section
+  ctx.clearRect(uiXOffset, 0, uiWidth, screen.height);
+
+  // Draw a generic section
+  const drawSection = (sprite, location, width, height) => {
+    ctx.drawImage(
+      image,
+      sprite.x,
+      sprite.y,
+      width || sprite.width,
+      height || sprite.height,
+      location.x + 4, // Add the gap
+      location.y,
+      width || sprite.width,
+      height || sprite.height
+    );
+  };
+
+  // Draw toggle bar
+  drawSection(toggle.sprite, toggle.location);
+
+  // Draw static UI sections
+  drawSection(toggle.sprite, toggle.location); // Map, Inventory, Player toggle bar
+  drawSection(inventory.sprite, inventory.location, inventory.location.width, inventory.location.height); // Content area background
+  drawSection(stance.sprite, stance.location); // Offense, Defense, Passive buttons
+
+  // Draw current toggle section
+  const drawTopSectionAndButton = (section, button, buttonLocation) => {
+    drawSection(section, top.location); // Draw top section
+    drawSection(button, buttonLocation, pixels, pixels); // Draw active toggle button
+  };
+
+  if (state.activeToggle === 'map') {
+    drawTopSectionAndButton(top.miniMap, toggle.mapButton, toggle.mapButtonLocation);
+    // Populate content for map toggle if needed
+  } else if (state.activeToggle === 'inventory') {
+    drawTopSectionAndButton(top.equipArea, toggle.inventoryButton, toggle.inventoryButtonLocation);
+    // Populate content for inventory toggle if needed
+  } else if (state.activeToggle === 'player') {
+    drawTopSectionAndButton(top.playerDetails, toggle.playerButton, toggle.playerButtonLocation);
+    // Populate content for player toggle if needed
+  }
+
+  // Draw current stance
+  const drawStance = (stanceType, location) => {
+    drawSection(stanceType, location, pixels, pixels);
+  };
+
+  if (state.activeStance === 'offense') {
+    drawStance(stance.offense, stance.offenseLocation);
+  } else if (state.activeStance === 'defense') {
+    drawStance(stance.defense, stance.defenseLocation);
+  } else if (state.activeStance === 'passive') {
+    drawStance(stance.passive, stance.passiveLocation);
+  }
+};
+
+// handle player movement -------------------------------------------------------
+const playerMove = (e) => {
+  if (!game.on || chat.open || player.cooldown) {
+    return;
+  };
+
+  const KEY_W = 'w';
+  const KEY_S = 's';
+  const KEY_A = 'a';
+  const KEY_D = 'd';
+
+  switch (e.key) {
+    case KEY_W:
+      player.direction = { x: 128, y: 128 };
+      player.data.details.location.y -= 1;
+      break;
+
+    case KEY_S:
+      player.direction = { x: 0, y: 128 };
+      player.data.details.location.y += 1;
+      break;
+
+    case KEY_A:
+      player.direction = { x: 256, y: 128 };
+      player.data.details.location.x -= 1;
+      break;
+
+    case KEY_D:
+      player.direction = { x: 384, y: 128 };
+      player.data.details.location.x += 1;
+      break;
+
+    default:
+      return;
+  };
+
+  // if (!collisionDetect(dx, dy)) {
+  //   updateWorldLocations(valX, valY);
+  // };
+  drawArea();
+  player.cooldown = true;
+  setTimeout(() => {
+    player.cooldown = false;
+  }, player.speed * 1000);
+};
+
 // handle "player login" -------- some day use mongoose -------------------------
 const handleLogin = async (e) => {
   e.preventDefault();
@@ -177,10 +235,10 @@ const handleLogin = async (e) => {
     form.style.display = 'none';
     form.blur();
     game.on = true;
-    // Start the game loop
-    gameLoop();
+    
+    // gameLoop();
+    drawAll();
   }, 500);
-
 };
 
 // update player data -----------------------------------------------------------
@@ -233,14 +291,14 @@ addEventListener("DOMContentLoaded", e => {
 
 // Game Loop --------------------------------------------------------------------
 function gameLoop() {
-  // Clear the canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Update game logic
 
   // Draw functions
+
   drawAll();
-  // drawAll(ctx, player, map, items, uiElements);
+
 
   // Call the next frame
   requestAnimationFrame(gameLoop);
@@ -248,10 +306,10 @@ function gameLoop() {
 
 /*
 
-Load UI class
+Event listener to update ui sections and player stance.
+Create character sheet to the left plus some simple styling
 Figure out my layers, move player to top layers, and uppermost above that.
 Detect collision tiles
-Add depots to a depot array
-Work on UI section
+Append map info in the map section
 
 */
