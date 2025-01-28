@@ -1,10 +1,10 @@
 {
   "items":[
     {
-      "id": "weapon_sword",
+      "id": "gladius",
       "name": "gladius",
-      "type": "weapon",
-      "category": "equippable",
+      "type": "sword",
+      "category": "weapon",
       "stats": {
         "damage": 10,
         "weight": 50
@@ -14,10 +14,49 @@
       "value": 100
     },
     {
-      "id": "weapon_twin_axe",
+      "id": "sword",
+      "name": "sword",
+      "type": "sword",
+      "category": "weapon",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "A proper blade.",
+      "value": 100
+    },
+    {
+      "id": "giant_sword",
+      "name": "giant sword",
+      "type": "sword",
+      "category": "weapon",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "Big blade you have there.",
+      "value": 100
+    },
+    {
+      "id": "firesword",
+      "name": "firesword",
+      "type": "sword",
+      "category": "weapon",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "Hot.",
+      "value": 100
+    },
+    {
+      "id": "twin_axe",
       "name": "twin axe",
-      "type": "weapon",
-      "category": "equippable",
+      "type": "axe",
+      "category": "weapon",
       "stats": {
         "damage": 10,
         "weight": 50
@@ -27,10 +66,10 @@
       "value": 100
     },
     {
-      "id": "weapon_wood_cudgel",
-      "name": "wood cudgel",
-      "type": "weapon",
-      "category": "equippable",
+      "id": "cudgel",
+      "name": "cudgel",
+      "type": "blunt",
+      "category": "weapon",
       "stats": {
         "damage": 10,
         "weight": 50
@@ -40,10 +79,10 @@
       "value": 100
     },
     {
-      "id": "weapon_spear",
+      "id": "spear",
       "name": "spear",
-      "type": "weapon",
-      "category": "equippable",
+      "type": "distance",
+      "category": "weapon",
       "stats": {
         "damage": 10,
         "weight": 50
@@ -53,16 +92,107 @@
       "value": 100
     },
     {
-      "id": "weapon_handwraps",
-      "name": "hand wraps",
-      "type": "weapon",
-      "category": "equippable",
+      "id": "bow",
+      "name": "bow",
+      "type": "distance",
+      "category": "weapon",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "Wood and string.",
+      "value": 100
+    },
+    {
+      "id": "elvin_bow",
+      "name": "elvin bow",
+      "type": "distance",
+      "category": "weapon",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "Beautiful wood and fine string.",
+      "value": 100
+    },
+    {
+      "id": "crossbow",
+      "name": "crossbow",
+      "type": "distance",
+      "category": "weapon",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "Cause arrows get stuck, but bolts leave holes.",
+      "value": 100
+    },
+    {
+      "id": "repeater_crossbow",
+      "name": "repeater crossbow",
+      "type": "distance",
+      "category": "weapon",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "Six bolts firing in succession. That's innovation.",
+      "value": 100
+    },
+    {
+      "id": "handwraps",
+      "name": "handwraps",
+      "type": "fist",
+      "category": "weapon",
       "stats": {
         "damage": 10,
         "weight": 50
       },
       "rarity": "common",
       "description": "Fine fabric for your fists in a fight.",
+      "value": 100
+    },
+    {
+      "id": "knuckle_dusters",
+      "name": "knuckle dusters",
+      "type": "fist",
+      "category": "weapon",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "Can't say you aren't ready to brawl.",
+      "value": 100
+    },
+    {
+      "id": "deer_horn_knives",
+      "name": "deer horn knives",
+      "type": "fist",
+      "category": "weapon",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "For fancy fist fighting fare.",
+      "value": 100
+    },
+    {
+      "id": "cestus",
+      "name": "cestus",
+      "type": "fist",
+      "category": "weapon",
+      "stats": {
+        "damage": 10,
+        "weight": 50
+      },
+      "rarity": "common",
+      "description": "Blades. On fists.",
       "value": 100
     }
   ]
