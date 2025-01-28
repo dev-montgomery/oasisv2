@@ -30,6 +30,9 @@ const items = new Items();
 const creatures = new Creatures();
 // const animations = new Animations();
 
+// variables
+let uiState = 'player';
+let uiStance = 'passive';
 // contains all draw functions --------------------------------------------------
 const drawAll = () => {
   // Draw the map (background) and Player
@@ -113,6 +116,7 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
 const drawUi = () => {
   const { image, pixels, top, inventory, toggle, stance, state } = uiElements;
   const uiXOffset = screen.width + 4; // Add 4-pixel gap from the screen width
+  
 
   // Clear UI section
   ctx.clearRect(uiXOffset, 0, uiWidth, screen.height);
@@ -146,29 +150,74 @@ const drawUi = () => {
     drawSection(button, buttonLocation, pixels, pixels); // Draw active toggle button
   };
 
-  if (state.activeToggle === 'map') {
+  if (uiState === 'map') {
     drawTopSectionAndButton(top.miniMap, toggle.mapButton, toggle.mapButtonLocation);
     // Populate content for map toggle if needed
-  } else if (state.activeToggle === 'inventory') {
+  } else if (uiState === 'inventory') {
     drawTopSectionAndButton(top.equipArea, toggle.inventoryButton, toggle.inventoryButtonLocation);
     // Populate content for inventory toggle if needed
-  } else if (state.activeToggle === 'player') {
+  } else if (uiState === 'player') {
     drawTopSectionAndButton(top.playerDetails, toggle.playerButton, toggle.playerButtonLocation);
     // Populate content for player toggle if needed
-  }
+  };
 
   // Draw current stance
   const drawStance = (stanceType, location) => {
     drawSection(stanceType, location, pixels, pixels);
   };
 
-  if (state.activeStance === 'offense') {
+  if (uiStance === 'offense') {
     drawStance(stance.offense, stance.offenseLocation);
-  } else if (state.activeStance === 'defense') {
+  } else if (uiStance === 'defense') {
     drawStance(stance.defense, stance.defenseLocation);
-  } else if (state.activeStance === 'passive') {
+  } else if (uiStance === 'passive') {
     drawStance(stance.passive, stance.passiveLocation);
-  }
+  };
+};
+
+// handle ui state, toggle buttons and stance -----------------------------------
+const handleUiStates = (event) => {
+  const { toggle, stance } = uiElements; // Access UI element locations
+  const { offsetX, offsetY, type } = event;
+
+  // Helper function to check if the mouse is over a button
+  const isMouseOverButton = ({ x, y }, width = 64, height = 64) => {
+    return offsetX >= x && offsetX <= x + width && offsetY >= y && offsetY <= y + height;
+  };
+
+  // Generic handler for hover and click events
+  const handleInteraction = (buttons, stateUpdater) => {
+    for (const [key, button] of Object.entries(buttons)) {
+      if (isMouseOverButton(button)) {
+        if (type === "mousedown") {
+          stateUpdater(key); // Update state variable dynamically
+          drawUi();
+        };
+        return true; // Hovering detected
+      };
+    };
+    return false; // No interaction
+  };
+
+  // Process toggle and stance buttons
+  const toggleButtons = {
+    map: toggle.mapButtonLocation,
+    inventory: toggle.inventoryButtonLocation,
+    player: toggle.playerButtonLocation,
+  };
+
+  const stanceButtons = {
+    offense: stance.offenseLocation,
+    defense: stance.defenseLocation,
+    passive: stance.passiveLocation,
+  };
+
+  // Detect hover and update UI state if needed
+  const hoveringToggle = handleInteraction(toggleButtons, (key) => (uiState = key));
+  const hoveringStance = handleInteraction(stanceButtons, (key) => (uiStance = key));
+
+  // Update cursor style based on hover state
+  document.body.style.cursor = hoveringToggle || hoveringStance ? "pointer" : "default";
 };
 
 // handle player movement -------------------------------------------------------
@@ -229,7 +278,6 @@ const handleLogin = async (e) => {
   const playerName = capitalizeWords(nameInput);
   player.data = resources.createPlayer(playerName);
 
-  console.log(player)
   setTimeout(() => {
     const form = document.querySelector('.form-container');
     form.style.display = 'none';
@@ -282,6 +330,9 @@ addEventListener("DOMContentLoaded", e => {
 
   addEventListener('keydown', playerMove);
 
+  canvas.addEventListener("mousemove", handleUiStates);
+  canvas.addEventListener("mousedown", handleUiStates);
+
   // window.addEventListener('resize', resizeCanvas);
 
   addEventListener('beforeunload', async (e) => {
@@ -306,10 +357,14 @@ function gameLoop() {
 
 /*
 
-Event listener to update ui sections and player stance.
 Create character sheet to the left plus some simple styling
+
 Figure out my layers, move player to top layers, and uppermost above that.
 Detect collision tiles
-Append map info in the map section
+
+Item behavior.... equip section, inventory section
+
+Implement NPCs, behavior
+Append map data, player data
 
 */
