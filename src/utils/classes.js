@@ -1,6 +1,5 @@
 const screenWidth = 832;
 const screenHeight = 704;
-const uiWidth = 192;
 
 export class Player {
   constructor() {
