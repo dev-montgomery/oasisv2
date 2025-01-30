@@ -12,7 +12,7 @@ const chat = { open: false };
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
 
-canvas.width = 1024 + 4; // inelegant... using a 4 pixel offset between screen and ui
+canvas.width = 1024;
 canvas.height = 704;
 const uiWidth = 192;
 
@@ -55,9 +55,16 @@ const characterSheet = (player) => {
   `;
 };
 
-// variables
+// variables --------------------------------------------------------------------
+// map variables
+let boundaries = [];
+
+// ui variables
 let uiState = 'player';
 let uiStance = 'passive';
+
+// player variables
+let playerState = {};
 
 // contains all draw functions --------------------------------------------------
 const drawAll = () => {
@@ -83,7 +90,7 @@ const drawTile = (image, { sx, sy, dx, dy }) => {
 const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.genus01.layers) => {
   const upperTileIDs = [220, 222, 223, 224, 240, 243, 260, 262, 263, 280, 283, 300, 301, 302, 303, 304, 320, 321, 322, 323, 324, 340, 343, 360, 362, 363, 380, 383];
   const waterTileIDs = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-  const boundaries = [];
+  boundaries = [];
   const wateries = [];
   const uppermost = [];
 
@@ -115,7 +122,7 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
         const tileData = { sx, sy, dx, dy };
   
         if (tileID === 10 || tileID === 11) {
-          boundaries.push(tileData); // use for collision detection
+          boundaries.push({ dx, dy }); // use for collision detection
         } else {
           if (waterTileIDs.includes(tileID)) {
             wateries.push(tileData); // potentially alternate tiles to simulate "shimmering"
@@ -158,7 +165,7 @@ const drawUi = () => {
       sprite.y,
       width || sprite.width,
       height || sprite.height,
-      location.x + 4, // Add the gap
+      location.x,
       location.y,
       width || sprite.width,
       height || sprite.height
@@ -250,49 +257,55 @@ const handleUiStates = (event) => {
 };
 
 // handle player movement -------------------------------------------------------
+const tileSize = 64;
+const centerX = 384;
+const centerY = 320;
+
+const canMove = (boundaries, newX, newY) => {
+  return !boundaries.some(boundary => 
+    newX === boundary.dx && newY === boundary.dy
+  );
+};
+
 const playerMove = (e) => {
-  if (!game.on || chat.open || player.cooldown) {
+  if (!game.on || chat.open || player.cooldown) return;
+
+  const movementOffsets = {
+    'w': { x: 0, y: -tileSize },
+    's': { x: 0, y: tileSize },
+    'a': { x: -tileSize, y: 0 },
+    'd': { x: tileSize, y: 0 }
+  };
+
+  const directionSprites = {
+    'w': { x: 128, y: 128 },
+    's': { x: 0, y: 128 },
+    'a': { x: 256, y: 128 },
+    'd': { x: 384, y: 128 }
+  };
+
+  const key = e.key.toLowerCase();
+  if (!movementOffsets[key]) return;
+
+  player.direction = directionSprites[key]; // Always update facing direction
+
+  if (e.shiftKey) {
+    // If Shift is held, only change direction, do not move
+    drawArea();
     return;
-  };
+  }
 
-  const KEY_W = 'w';
-  const KEY_S = 's';
-  const KEY_A = 'a';
-  const KEY_D = 'd';
+  const newX = centerX + movementOffsets[key].x;
+  const newY = centerY + movementOffsets[key].y;
 
-  switch (e.key) {
-    case KEY_W:
-      player.direction = { x: 128, y: 128 };
-      player.data.details.location.y -= 1;
-      break;
+  if (canMove(boundaries, newX, newY)) {
+    player.data.details.location.x += movementOffsets[key].x / tileSize;
+    player.data.details.location.y += movementOffsets[key].y / tileSize;
+  }
 
-    case KEY_S:
-      player.direction = { x: 0, y: 128 };
-      player.data.details.location.y += 1;
-      break;
-
-    case KEY_A:
-      player.direction = { x: 256, y: 128 };
-      player.data.details.location.x -= 1;
-      break;
-
-    case KEY_D:
-      player.direction = { x: 384, y: 128 };
-      player.data.details.location.x += 1;
-      break;
-
-    default:
-      return;
-  };
-
-  // if (!collisionDetect(dx, dy)) {
-  //   updateWorldLocations(valX, valY);
-  // };
   drawArea();
   player.cooldown = true;
-  setTimeout(() => {
-    player.cooldown = false;
-  }, player.speed * 1000);
+  setTimeout(() => player.cooldown = false, player.speed * 1000);
 };
 
 // handle "player login" -------- some day use mongoose -------------------------
@@ -385,8 +398,6 @@ function gameLoop() {
 };
 
 /*
-
-Create character sheet to the left plus some simple styling
 
 Figure out my layers, move player to top layers, and uppermost above that.
 Detect collision tiles

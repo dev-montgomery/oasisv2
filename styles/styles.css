@@ -107,26 +107,15 @@ p, h1, h2, h3, h4, h5, h6 {
 .player-details-container {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   height: 704px;
   width: 250px;   
   background: #2e2e2e;
   color: #ccc;
   line-height: 2;
-  padding: 1rem;
   font-size: 1.2rem;
+  padding: 0 2rem; /* Adds padding to the left and right */
 }
-/* 
-.player-details-container .box {
-  font-size: 1rem;
-  padding-top: 0.2rem;
-  padding-bottom: 1rem;
-}
-
-.player-details-container .box li {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-} */
 
 /* Utility Classes */
 .noselect {
