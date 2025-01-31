@@ -30,6 +30,19 @@ const items = new Items();
 const creatures = new Creatures();
 // const animations = new Animations();
 
+// variables --------------------------------------------------------------------
+// map variables
+let boundaryTiles = [];
+let waterTiles = [];
+let uppermostTiles = [];
+
+// ui variables
+let uiState = 'player';
+let uiStance = 'passive';
+
+// player variables
+let playerState = {};
+
 // character sheet --------------------------------------------------------------
 const characterSheet = (player) => {
   const container = document.querySelector(".player-details-container");
@@ -55,17 +68,6 @@ const characterSheet = (player) => {
   `;
 };
 
-// variables --------------------------------------------------------------------
-// map variables
-let boundaries = [];
-
-// ui variables
-let uiState = 'player';
-let uiStance = 'passive';
-
-// player variables
-let playerState = {};
-
 // contains all draw functions --------------------------------------------------
 const drawAll = () => {
   // Populate Character Sheet
@@ -87,12 +89,13 @@ const drawTile = (image, { sx, sy, dx, dy }) => {
   ctx.drawImage(image, sx, sy, tileSize, tileSize, dx, dy, tileSize, tileSize);
 };
 
+const waterTileIDs = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+const uppermostTileIDs = [30, 31, 300, 301, 320, 321, 322, 323, 324, 340, 343, 360, 362, 363, 380, 383];
+
 const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.genus01.layers) => {
-  const upperTileIDs = [220, 222, 223, 224, 240, 243, 260, 262, 263, 280, 283, 300, 301, 302, 303, 304, 320, 321, 322, 323, 324, 340, 343, 360, 362, 363, 380, 383];
-  const waterTileIDs = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-  boundaries = [];
-  const wateries = [];
-  const uppermost = [];
+  boundaryTiles = [];
+  waterTiles = [];
+  uppermostTiles = [];
 
   // Calculate starting tile based on the player position
   const startingTile = {
@@ -114,6 +117,7 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
   // Draw tiles
   visibleMap.forEach(layer => {
     layer.forEach((tileID, i) => {
+      
       if (tileID > 0) {
         const sx = Math.floor((tileID - 1) % 20) * area.pixels; // Source x on spritesheet
         const sy = Math.floor((tileID - 1) / 20) * area.pixels; // Source y on spritesheet
@@ -122,17 +126,13 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
         const tileData = { sx, sy, dx, dy };
   
         if (tileID === 10 || tileID === 11) {
-          boundaries.push({ dx, dy }); // use for collision detection
+          boundaryTiles.push({ dx, dy }); // Collision detection
+        } else if (uppermostTileIDs.includes(tileID - 1)) {
+          uppermostTiles.push(tileData);
         } else {
-          if (waterTileIDs.includes(tileID)) {
-            wateries.push(tileData); // potentially alternate tiles to simulate "shimmering"
-            drawTile(area.image, tileData);
-          } else if (!upperTileIDs.includes(tileID)) {
-            drawTile(area.image, tileData);
-          };
-  
-          if (upperTileIDs.includes(tileID)) {
-            uppermost.push(tileData);
+          drawTile(area.image, tileData);
+          if (waterTileIDs.includes(tileID - 1)) {
+            waterTiles.push(tileData);
           };
         };
       };
@@ -143,7 +143,7 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
   player.draw(ctx);
 
   // Draw upper tiles after all others
-  uppermost.forEach(tileData => {
+  uppermostTiles.forEach(tileData => {
     drawTile(area.image, tileData);
   });
 };
@@ -261,8 +261,8 @@ const tileSize = 64;
 const centerX = 384;
 const centerY = 320;
 
-const canMove = (boundaries, newX, newY) => {
-  return !boundaries.some(boundary => 
+const canMove = (boundaryTiles, newX, newY) => {
+  return !boundaryTiles.some(boundary => 
     newX === boundary.dx && newY === boundary.dy
   );
 };
@@ -298,7 +298,7 @@ const playerMove = (e) => {
   const newX = centerX + movementOffsets[key].x;
   const newY = centerY + movementOffsets[key].y;
 
-  if (canMove(boundaries, newX, newY)) {
+  if (canMove(boundaryTiles, newX, newY)) {
     player.data.details.location.x += movementOffsets[key].x / tileSize;
     player.data.details.location.y += movementOffsets[key].y / tileSize;
   }
@@ -398,9 +398,6 @@ function gameLoop() {
 };
 
 /*
-
-Figure out my layers, move player to top layers, and uppermost above that.
-Detect collision tiles
 
 Item behavior.... equip section, inventory section
 
