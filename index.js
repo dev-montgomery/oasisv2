@@ -3,11 +3,6 @@ import { Player, Area, UiElements, Items, Item, Creatures } from './src/utils/cl
 
 const API_URL = 'http://localhost:3000/playerdata';
 
-const game = document.querySelector('.game-container');
-game.on = false;
-
-const chat = { open: false };
-
 // canvas and context and screen sizes ------------------------------------------
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
@@ -21,6 +16,11 @@ const screen = {
   width: canvas.width - uiWidth, 
   height: canvas.height 
 };
+
+const game = document.querySelector('.game-container');
+game.on = false;
+
+const chat = { open: false };
 
 // init sprite assets ------------------------------------------------------------------
 const player = new Player();
@@ -41,32 +41,7 @@ let uiStance = 'passive';
 
 // item variables
 let inGameItems = [];
-inGameItems.push(new Item(0, 'sword', 'mainhand', { x: 64, y: 320 }, { x: 155, y: 187 }));
-
-// character sheet --------------------------------------------------------------
-const characterSheet = (player) => {
-  const container = document.querySelector(".player-details-container");
-  if (!container) return;
-
-  container.innerHTML = `
-    <h2>${player.name}</h2>
-    <p><strong>level:</strong> ${player.details.lvls.lvl}</p>
-    <p><strong>m.level:</strong> ${player.details.lvls.mglvl}</p>
-    <br>
-    <p><strong>health:</strong> ${player.details.stats.health}</p>
-    <p><strong>magic:</strong> ${player.details.stats.magic}</p>
-    <p><strong>capacity:</strong> ${player.details.stats.capacity}</p>
-    <p><strong>speed:</strong> ${player.details.stats.speed}</p>
-    <br>
-    <p><strong>fist:</strong> ${player.details.skills.fist}</p>
-    <p><strong>sword:</strong> ${player.details.skills.sword}</p>
-    <p><strong>axe:</strong> ${player.details.skills.axe}</p>
-    <p><strong>blunt:</strong> ${player.details.skills.blunt}</p>
-    <p><strong>distance:</strong> ${player.details.skills.distance}</p>
-    <p><strong>shield:</strong> ${player.details.skills.shield}</p>
-    <p><strong>fishing:</strong> ${player.details.skills.fishing}</p>
-  `;
-};
+inGameItems.push(new Item(0, 'sword', 'mainhand', { x: 64, y: 320 }, { x: 155, y: 187 })); // for testing
 
 // contains all draw functions --------------------------------------------------
 const drawAll = () => {
@@ -93,14 +68,39 @@ const drawAll = () => {
   drawUi();
 };
 
+// character sheet section ------------------------------------------------------
+const characterSheet = (player) => {
+  const container = document.querySelector(".player-details-container");
+  if (!container) return;
+
+  container.innerHTML = `
+    <h2>${player.name}</h2>
+    <p><strong>level:</strong> ${player.details.lvls.lvl}</p>
+    <p><strong>m.level:</strong> ${player.details.lvls.mglvl}</p>
+    <br>
+    <p><strong>health:</strong> ${player.details.stats.health}</p>
+    <p><strong>magic:</strong> ${player.details.stats.magic}</p>
+    <p><strong>capacity:</strong> ${player.details.stats.capacity}</p>
+    <p><strong>speed:</strong> ${player.details.stats.speed}</p>
+    <br>
+    <p><strong>fist:</strong> ${player.details.skills.fist}</p>
+    <p><strong>sword:</strong> ${player.details.skills.sword}</p>
+    <p><strong>axe:</strong> ${player.details.skills.axe}</p>
+    <p><strong>blunt:</strong> ${player.details.skills.blunt}</p>
+    <p><strong>distance:</strong> ${player.details.skills.distance}</p>
+    <p><strong>shield:</strong> ${player.details.skills.shield}</p>
+    <p><strong>fishing:</strong> ${player.details.skills.fishing}</p>
+  `;
+};
+
 // draw map ---------------------------------------------------------------------
+const waterTileIDs = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+const uppermostTileIDs = [30, 31, 300, 301, 320, 321, 322, 323, 324, 340, 343, 360, 362, 363, 380, 383];
+
 const drawTile = (image, { sx, sy, dx, dy }) => {
   const tileSize = 64; // Fixed size for tiles
   ctx.drawImage(image, sx, sy, tileSize, tileSize, dx, dy, tileSize, tileSize);
 };
-
-const waterTileIDs = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-const uppermostTileIDs = [30, 31, 300, 301, 320, 321, 322, 323, 324, 340, 343, 360, 362, 363, 380, 383];
 
 const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.genus01.layers) => {
   boundaryTiles = [];
@@ -212,7 +212,7 @@ const drawUi = () => {
   };
 };
 
-// handle ui state, toggle buttons and stance -----------------------------------
+// handle ui state
 const handleUiStates = e => {
   const { toggle, stance } = uiElements; // Access UI element locations
   const { offsetX, offsetY, type } = e;
@@ -408,7 +408,7 @@ const playerMove = e => {
   setTimeout(() => player.cooldown = false, player.speed * 1000);
 };
 
-// handle "player login" -------- some day use mongoose -------------------------
+// handle player "login" --------------------------------------------------------
 const handleLogin = async e => {
   e.preventDefault();
 
@@ -425,14 +425,18 @@ const handleLogin = async e => {
     const form = document.querySelector('.form-container');
     form.style.display = 'none';
     form.blur();
+
     game.on = true;
+
+    document.querySelector('.background').remove();
+    document.querySelector('.game-container')?.classList.remove('hidden');
     
     // gameLoop();
     drawAll();
   }, 500);
 };
 
-// update player data -----------------------------------------------------------
+// handle player "logout" -------------------------------------------------------
 const updateLocalPlayerData = () => {
   const playerToUpdateIndex = resources.playerData.playerlist.findIndex(user => user.id === player.data.id);
   if (playerToUpdateIndex !== -1) {
@@ -508,12 +512,3 @@ function gameLoop() {
   // Call the next frame
   requestAnimationFrame(gameLoop);
 };
-
-/*
-
-Item behavior.... equip section, inventory section
-
-Implement NPCs, behavior
-Append map data, player data
-
-*/

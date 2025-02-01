@@ -136,18 +136,6 @@ export class Items {
   };
 };
 
-export class Item {
-  constructor( id, name, type, spritePosition, worldPosition, drawPosition ) {
-    this.id = id;
-    this.name = name;
-    this.type = type;
-    this.spritePosition = spritePosition;
-    this.worldPosition = worldPosition;
-    this.drawPosition = drawPosition || null;
-    this.location = 'world';
-  };
-};
-
 export class Creatures {
   constructor() {
     this.image = new Image();
@@ -177,3 +165,15 @@ export class Creatures {
 //     });
 //   };
 // };
+
+export class Item {
+  constructor( id, name, type, spritePosition, worldPosition, drawPosition ) {
+    this.id = id;
+    this.name = name;
+    this.type = type;
+    this.spritePosition = spritePosition;
+    this.worldPosition = worldPosition;
+    this.drawPosition = drawPosition || null;
+    this.location = 'world';
+  };
+};
