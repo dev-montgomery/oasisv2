@@ -1,5 +1,5 @@
 import { resources } from './src/utils/resources.js';
-import { Player, Area, UiElements, Items, Creatures } from './src/utils/classes.js';
+import { Player, Area, UiElements, Items, Item, Creatures } from './src/utils/classes.js';
 
 const API_URL = 'http://localhost:3000/playerdata';
 
@@ -22,7 +22,7 @@ const screen = {
   height: canvas.height 
 };
 
-// init assets ------------------------------------------------------------------
+// init sprite assets ------------------------------------------------------------------
 const player = new Player();
 const area = new Area();
 const uiElements = new UiElements();
@@ -30,7 +30,6 @@ const items = new Items();
 const creatures = new Creatures();
 // const animations = new Animations();
 
-// variables --------------------------------------------------------------------
 // map variables
 let boundaryTiles = [];
 let waterTiles = [];
@@ -40,8 +39,9 @@ let uppermostTiles = [];
 let uiState = 'player';
 let uiStance = 'passive';
 
-// player variables
-let playerState = {};
+// item variables
+let inGameItems = [];
+inGameItems.push(new Item(0, 'sword', 'mainhand', { x: 64, y: 320 }, { x: 155, y: 187 }));
 
 // character sheet --------------------------------------------------------------
 const characterSheet = (player) => {
@@ -77,7 +77,17 @@ const drawAll = () => {
   drawArea();
 
   // Draw all non-player items like objects or enemies
-  // items.forEach(item => item.draw(ctx));
+  inGameItems.forEach(item => {
+    if (isItemVisible(item)) {
+
+    }
+  })
+
+  // Draw player before uppermost layer
+  player.draw(ctx);
+
+  // Draw upper tiles after all others
+  uppermostTiles.forEach(tileData => drawTile(area.image, tileData));
 
   // Draw UI elements last so they appear on top
   drawUi();
@@ -138,14 +148,6 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
       };
     });
   });
-  
-  // Draw player before uppermost layer
-  player.draw(ctx);
-
-  // Draw upper tiles after all others
-  uppermostTiles.forEach(tileData => {
-    drawTile(area.image, tileData);
-  });
 };
 
 // draw ui elements -------------------------------------------------------------
@@ -153,7 +155,6 @@ const drawUi = () => {
   const { image, pixels, top, inventory, toggle, stance, state } = uiElements;
   const uiXOffset = screen.width + 4; // Add 4-pixel gap from the screen width
   
-
   // Clear UI section
   ctx.clearRect(uiXOffset, 0, uiWidth, screen.height);
 
@@ -212,9 +213,9 @@ const drawUi = () => {
 };
 
 // handle ui state, toggle buttons and stance -----------------------------------
-const handleUiStates = (event) => {
+const handleUiStates = e => {
   const { toggle, stance } = uiElements; // Access UI element locations
-  const { offsetX, offsetY, type } = event;
+  const { offsetX, offsetY, type } = e;
 
   // Helper function to check if the mouse is over a button
   const isMouseOverButton = ({ x, y }, width = 64, height = 64) => {
@@ -256,6 +257,104 @@ const handleUiStates = (event) => {
   document.body.style.cursor = hoveringToggle || hoveringStance ? "pointer" : "default";
 };
 
+// handle equip, inventory, and depot -------------------------------------------
+const drawItem = (item) => {
+  const { spriteLocation, drawPosition } = item;
+  const size = 64;
+
+  ctx.drawImage(
+    items.image,
+    spriteLocation.x,
+    spriteLocation.y,
+    size,
+    size,
+    drawPosition.x,
+    drawPosition.y,
+    size,
+    size
+  );
+};
+
+const isItemVisible = (item) => {
+  const visibleStartX = player.data.details.location.x - Math.floor(screen.frames.col / 2);
+  const visibleEndX = visibleStartX + screen.frames.col - 1;
+  const visibleStartY = player.data.details.location.y - Math.floor(screen.frames.row / 2);
+  const visibleEndY = visibleStartY + screen.frames.row - 1;
+
+  return (
+    item.worldPosition.x >= visibleStartX &&
+    item.worldPosition.x <= visibleEndX &&
+    item.worldPosition.y >= visibleStartY &&
+    item.worldPosition.y <= visibleEndY
+  );
+};
+
+// const isItemInRange = (item) => {
+//   const playerFrameX = player.data.details.location.x;
+//   const playerFrameY = player.data.details.location.y;
+
+//   const dx = Math.abs(item.worldPosition.x - playerFrameX);
+//   const dy = Math.abs(item.worldPosition.y - playerFrameY);
+//   if (dx <= 1 && dy <=1) console.log('inrange')
+//   return dx <= 1 && dy <= 1; // Ensures the item is in the player's frame or an adjacent frame
+// };
+
+// const updateItemDrawPosition = (item) => {
+//   const visibleStartX = player.data.details.location.x - Math.floor(screen.frames.col / 2);
+//   const visibleStartY = player.data.details.location.y - Math.floor(screen.frames.row / 2);
+
+//   item.drawPosition.x = (item.worldPosition.x - visibleStartX) * 64;
+//   item.drawPosition.y = (item.worldPosition.y - visibleStartY) * 64;
+// };
+
+// const handleMouseMove = (e) => {
+//   inGameItems.forEach(item => {
+//     if (
+//       e.offsetX >= item.drawX &&
+//       e.offsetX <= item.drawX + 64 &&
+//       e.offsetY >= item.drawY &&
+//       e.offsetY <= item.drawY + 64 &&
+//       isItemInRange(item)
+//     ) {
+//       canvas.style.cursor = 'grab';
+//     } else {
+//       canvas.style.cursor = 'default';
+//     };
+//   });
+// };
+
+// const handleMouseDown = (e) => {
+//   inGameItems.forEach(item => {
+//     if (
+//       e.offsetX >= item.drawPosition.x &&
+//       e.offsetX <= item.drawPosition.x + 64 &&
+//       e.offsetY >= item.drawPosition.y &&
+//       e.offsetY <= item.drawPosition.y + 64 &&
+//       isItemInRange(item)
+//     ) {
+//       item.isBeingDragged = true;
+//       canvas.style.cursor = 'grabbing';
+//     };
+//   });
+// };
+
+// const handleMouseUp = (e) => {
+//   inGameItems.forEach(item => {
+//     if (item.isBeingDragged) {
+//       const newFrameX = player.data.details.location.x + Math.floor((e.offsetX - 384) / 64);
+//       const newFrameY = player.data.details.location.y + Math.floor((e.offsetY - 320) / 64);
+
+//       if (isItemInRange({ worldFrame: { x: newFrameX, y: newFrameY } })) {
+//         item.worldFrame.x = newFrameX;
+//         item.worldFrame.y = newFrameY;
+//       }
+//       item.isBeingDragged = false;
+//       updateItemDrawPosition(item);
+//       canvas.style.cursor = 'default';
+//     };
+//   });
+// };
+
 // handle player movement -------------------------------------------------------
 const tileSize = 64;
 const centerX = 384;
@@ -267,7 +366,7 @@ const canMove = (boundaryTiles, newX, newY) => {
   );
 };
 
-const playerMove = (e) => {
+const playerMove = e => {
   if (!game.on || chat.open || player.cooldown) return;
 
   const movementOffsets = {
@@ -291,9 +390,9 @@ const playerMove = (e) => {
 
   if (e.shiftKey) {
     // If Shift is held, only change direction, do not move
-    drawArea();
+    drawAll();
     return;
-  }
+  };
 
   const newX = centerX + movementOffsets[key].x;
   const newY = centerY + movementOffsets[key].y;
@@ -301,17 +400,18 @@ const playerMove = (e) => {
   if (canMove(boundaryTiles, newX, newY)) {
     player.data.details.location.x += movementOffsets[key].x / tileSize;
     player.data.details.location.y += movementOffsets[key].y / tileSize;
-  }
+  };
 
-  drawArea();
+  drawAll();
+  
   player.cooldown = true;
   setTimeout(() => player.cooldown = false, player.speed * 1000);
 };
 
 // handle "player login" -------- some day use mongoose -------------------------
-const handleLogin = async (e) => {
+const handleLogin = async e => {
   e.preventDefault();
-  
+
   const capitalizeWords = input => {  
     return input.split(' ').map(word => word[0]?.toUpperCase() + word.slice(1).toLowerCase()).join(' ');
   };
@@ -319,7 +419,8 @@ const handleLogin = async (e) => {
   const nameInput = document.querySelector('#playername').value.trim();
   const playerName = capitalizeWords(nameInput);
   player.data = resources.createPlayer(playerName);
-
+  resources.itemData.itemsInGame.length > 0 && inGameItems.push(resources.itemData.itemsInGame);
+  
   setTimeout(() => {
     const form = document.querySelector('.form-container');
     form.style.display = 'none';
@@ -342,7 +443,7 @@ const updateLocalPlayerData = () => {
   };
 };
 
-const postPlayerData = async (data) => {
+const postPlayerData = async data => {
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
@@ -372,8 +473,19 @@ addEventListener("DOMContentLoaded", e => {
 
   addEventListener('keydown', playerMove);
 
-  canvas.addEventListener("mousemove", handleUiStates);
-  canvas.addEventListener("mousedown", handleUiStates);
+  canvas.addEventListener("mousedown", e => {
+    handleUiStates(e);
+    // handleMouseDown(e);
+  });
+
+  canvas.addEventListener("mousemove", e => {
+    handleUiStates(e);
+    // handleMouseMove(e);
+  }); 
+
+  canvas.addEventListener("mouseup", e => {
+    // handleMouseUp(e);
+  });
 
   // window.addEventListener('resize', resizeCanvas);
 
