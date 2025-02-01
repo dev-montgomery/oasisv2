@@ -1,0 +1,130 @@
+/* CSS RESET */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  height: 100dvh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: clip;
+}
+
+img, picture, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+  font-size: 0;
+  font-style: italic;
+  background-repeat: no-repeat;
+  background-size: cover;
+  shape-margin: 1rem;
+}
+
+input, button, textarea, select {
+  font: inherit;
+}
+
+p, h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: break-word;
+}
+
+#root, #__next {
+  isolation: isolate;
+}
+
+/* CSS Styles */
+/* form styles */
+.form-container {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+}
+
+#login-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#login-form legend {
+  padding: 1rem;
+  margin-left: 10px;
+}
+
+#login-form label {
+  font-size: 1.5rem;
+  padding: 1rem;
+}
+
+#login-form input[name="playername"] {
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  font-size: 2rem;
+  padding: 0.5rem;
+  width: 16rem;
+  color: #fff;
+}
+
+#login-form #login-btn {
+  border: none;
+  background: none;
+  padding: 0.5rem 2rem;
+  margin-left: 15px;
+  cursor: pointer;
+  color: #fff;
+}
+
+/* Game Container */
+.game-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Lefthand-side */
+.player-details-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 704px;
+  width: 250px;   
+  background: #2e2e2e;
+  color: #ccc;
+  line-height: 2;
+  font-size: 1.2rem;
+  padding: 0 2rem; /* Adds padding to the left and right */
+}
+
+/* Utility Classes */
+.noselect {
+  user-select: none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -o-user-select: none;
+}
+
+/* .hidden {
+  display: none;
+} */

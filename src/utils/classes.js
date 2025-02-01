@@ -1,6 +1,5 @@
 const screenWidth = 832;
 const screenHeight = 704;
-const uiWidth = 192;
 
 export class Player {
   constructor() {
@@ -127,7 +126,6 @@ export class Items {
   constructor() {
     this.image = new Image();
     this.image.src = './backend/assets/item_data/item-assets.png';
-    this.pixels = 64;
   };
 
   loadImage() {
@@ -135,6 +133,18 @@ export class Items {
       this.image.onload = () => resolve(this.image);
       this.image.onerror = () => reject(new Error('Failed to load area image.'));
     });
+  };
+};
+
+export class Item {
+  constructor( id, name, type, spritePosition, worldPosition, drawPosition ) {
+    this.id = id;
+    this.name = name;
+    this.type = type;
+    this.spritePosition = spritePosition;
+    this.worldPosition = worldPosition;
+    this.drawPosition = drawPosition || null;
+    this.location = 'world';
   };
 };
 

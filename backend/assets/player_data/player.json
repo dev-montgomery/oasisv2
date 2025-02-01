@@ -14,8 +14,11 @@
         },
         "stats": {
           "health": 20,
+          "currHealth": 20,
           "magic": 10,
+          "currMagic": 10,
           "capacity": 50,
+          "currCapacity": 50,
           "speed": 1
         },
         "skills": {
@@ -24,7 +27,7 @@
           "axe": 0,
           "blunt": 0,
           "distance": 0,
-          "defense": 0,
+          "shield": 0,
           "fishing": 0
         },
         "experience": {
@@ -35,7 +38,7 @@
           "axexp": 0,
           "bluntxp": 0,
           "distancexp": 0,
-          "defensexp": 0,
+          "shieldxp": 0,
           "fishingxp": 0
         },
         "equipped": {
@@ -66,8 +69,11 @@
     },
     "stats": {
       "health": 20,
+      "currHealth": 20,
       "magic": 10,
+      "currMagic": 10,
       "capacity": 50,
+      "currCapacity": 50,
       "speed": 1
     },
     "skills": {
@@ -76,7 +82,7 @@
       "axe": 0,
       "blunt": 0,
       "distance": 0,
-      "defense": 0,
+      "shield": 0,
       "fishing": 0
     },
     "experience": {
@@ -87,7 +93,7 @@
       "axexp": 0,
       "bluntxp": 0,
       "distancexp": 0,
-      "defensexp": 0,
+      "shieldxp": 0,
       "fishingxp": 0
     },
     "equipped": {
