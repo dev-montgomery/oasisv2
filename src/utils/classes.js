@@ -173,7 +173,9 @@ export class Item {
     this.type = type;
     this.spritePosition = spritePosition;
     this.worldPosition = worldPosition;
-    this.drawPosition = drawPosition || null;
+    this.drawPosition = drawPosition || { x: null, y: null };
     this.location = 'world';
+    this.hover = false;
+    this.held = false;
   };
 };

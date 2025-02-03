@@ -30,6 +30,13 @@ const items = new Items();
 const creatures = new Creatures();
 // const animations = new Animations();
 
+// movement variables
+const tileSize = 64;
+const centerX = 384;
+const centerY = 320;
+let lastMouseX = 0;
+let lastMouseY = 0;
+
 // map variables
 let boundaryTiles = [];
 let waterTiles = [];
@@ -52,11 +59,7 @@ const drawAll = () => {
   drawArea();
 
   // Draw all non-player items like objects or enemies
-  inGameItems.forEach(item => {
-    if (isItemVisible(item)) {
-
-    }
-  })
+  inGameItems.forEach(item => isItemVisible(item) && drawItem(item));
 
   // Draw player before uppermost layer
   player.draw(ctx);
@@ -93,7 +96,7 @@ const characterSheet = (player) => {
   `;
 };
 
-// draw map ---------------------------------------------------------------------
+// draw screen ------------------------------------------------------------------
 const waterTileIDs = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 const uppermostTileIDs = [30, 31, 300, 301, 320, 321, 322, 323, 324, 340, 343, 360, 362, 363, 380, 383];
 
@@ -212,31 +215,27 @@ const drawUi = () => {
   };
 };
 
-// handle ui state
-const handleUiStates = e => {
-  const { toggle, stance } = uiElements; // Access UI element locations
+const handleUiStates = (e) => {
+  const { toggle, stance } = uiElements;
   const { offsetX, offsetY, type } = e;
 
-  // Helper function to check if the mouse is over a button
   const isMouseOverButton = ({ x, y }, width = 64, height = 64) => {
     return offsetX >= x && offsetX <= x + width && offsetY >= y && offsetY <= y + height;
   };
 
-  // Generic handler for hover and click events
   const handleInteraction = (buttons, stateUpdater) => {
     for (const [key, button] of Object.entries(buttons)) {
       if (isMouseOverButton(button)) {
         if (type === "mousedown") {
-          stateUpdater(key); // Update state variable dynamically
+          stateUpdater(key);
           drawUi();
         };
-        return true; // Hovering detected
+        return "pointer"; // Return pointer if over a UI element
       };
     };
-    return false; // No interaction
+    return null; // Return null if no UI interaction
   };
 
-  // Process toggle and stance buttons
   const toggleButtons = {
     map: toggle.mapButtonLocation,
     inventory: toggle.inventoryButtonLocation,
@@ -249,23 +248,23 @@ const handleUiStates = e => {
     passive: stance.passiveLocation,
   };
 
-  // Detect hover and update UI state if needed
-  const hoveringToggle = handleInteraction(toggleButtons, (key) => (uiState = key));
-  const hoveringStance = handleInteraction(stanceButtons, (key) => (uiStance = key));
-
-  // Update cursor style based on hover state
-  document.body.style.cursor = hoveringToggle || hoveringStance ? "pointer" : "default";
+  return (
+    handleInteraction(toggleButtons, (key) => (uiState = key)) ||
+    handleInteraction(stanceButtons, (key) => (uiStance = key))
+  );
 };
 
-// handle equip, inventory, and depot -------------------------------------------
+// handle item behavior ---------------------------------------------------------
 const drawItem = (item) => {
-  const { spriteLocation, drawPosition } = item;
+  const { spritePosition, drawPosition } = item;
   const size = 64;
+
+  updateItemDrawPosition(item);
 
   ctx.drawImage(
     items.image,
-    spriteLocation.x,
-    spriteLocation.y,
+    spritePosition.x,
+    spritePosition.y,
     size,
     size,
     drawPosition.x,
@@ -289,81 +288,103 @@ const isItemVisible = (item) => {
   );
 };
 
-// const isItemInRange = (item) => {
-//   const playerFrameX = player.data.details.location.x;
-//   const playerFrameY = player.data.details.location.y;
+const isItemInRangeOfPlayer = (item) => {
+  const playerFrameX = player.data.details.location.x;
+  const playerFrameY = player.data.details.location.y;
 
-//   const dx = Math.abs(item.worldPosition.x - playerFrameX);
-//   const dy = Math.abs(item.worldPosition.y - playerFrameY);
-//   if (dx <= 1 && dy <=1) console.log('inrange')
-//   return dx <= 1 && dy <= 1; // Ensures the item is in the player's frame or an adjacent frame
-// };
+  const dx = Math.abs(item.worldPosition.x - playerFrameX);
+  const dy = Math.abs(item.worldPosition.y - playerFrameY);
+  
+  return dx <= 1 && dy <= 1; // Ensures the item is in the player's frame or an adjacent frame
+};
 
-// const updateItemDrawPosition = (item) => {
-//   const visibleStartX = player.data.details.location.x - Math.floor(screen.frames.col / 2);
-//   const visibleStartY = player.data.details.location.y - Math.floor(screen.frames.row / 2);
+const updateItemDrawPosition = (item) => {
+  const visibleStartX = player.data.details.location.x - Math.floor(screen.frames.col / 2);
+  const visibleStartY = player.data.details.location.y - Math.floor(screen.frames.row / 2);
 
-//   item.drawPosition.x = (item.worldPosition.x - visibleStartX) * 64;
-//   item.drawPosition.y = (item.worldPosition.y - visibleStartY) * 64;
-// };
+  item.drawPosition.x = (item.worldPosition.x - visibleStartX) * 64;
+  item.drawPosition.y = (item.worldPosition.y - visibleStartY) * 64;
+};
 
-// const handleMouseMove = (e) => {
-//   inGameItems.forEach(item => {
-//     if (
-//       e.offsetX >= item.drawX &&
-//       e.offsetX <= item.drawX + 64 &&
-//       e.offsetY >= item.drawY &&
-//       e.offsetY <= item.drawY + 64 &&
-//       isItemInRange(item)
-//     ) {
-//       canvas.style.cursor = 'grab';
-//     } else {
-//       canvas.style.cursor = 'default';
-//     };
-//   });
-// };
+// mouse behavior ---------------------------------------------------------------
+const handleMouseMove = (e) => {
+  const { offsetX, offsetY } = e;
 
-// const handleMouseDown = (e) => {
-//   inGameItems.forEach(item => {
-//     if (
-//       e.offsetX >= item.drawPosition.x &&
-//       e.offsetX <= item.drawPosition.x + 64 &&
-//       e.offsetY >= item.drawPosition.y &&
-//       e.offsetY <= item.drawPosition.y + 64 &&
-//       isItemInRange(item)
-//     ) {
-//       item.isBeingDragged = true;
-//       canvas.style.cursor = 'grabbing';
-//     };
-//   });
-// };
+  // Check UI first and update cursor accordingly
+  const uiCursor = handleUiStates(e);
+  if (uiCursor) {
+    canvas.style.cursor = uiCursor;
+    return; // Exit early if over a UI element
+  }
 
-// const handleMouseUp = (e) => {
-//   inGameItems.forEach(item => {
-//     if (item.isBeingDragged) {
-//       const newFrameX = player.data.details.location.x + Math.floor((e.offsetX - 384) / 64);
-//       const newFrameY = player.data.details.location.y + Math.floor((e.offsetY - 320) / 64);
+  let hoveringItem = null;
 
-//       if (isItemInRange({ worldFrame: { x: newFrameX, y: newFrameY } })) {
-//         item.worldFrame.x = newFrameX;
-//         item.worldFrame.y = newFrameY;
-//       }
-//       item.isBeingDragged = false;
-//       updateItemDrawPosition(item);
-//       canvas.style.cursor = 'default';
-//     };
-//   });
-// };
+  inGameItems.forEach(item => {
+    const isHovered =
+      offsetX >= item.drawPosition.x &&
+      offsetX <= item.drawPosition.x + 64 &&
+      offsetY >= item.drawPosition.y &&
+      offsetY <= item.drawPosition.y + 64 &&
+      isItemInRangeOfPlayer(item);
+
+    item.hover = isHovered;
+    if (isHovered) hoveringItem = item;
+  });
+
+  if (inGameItems.some(item => item.held)) {
+    canvas.style.cursor = "grabbing"; // Keep grabbing if an item is held
+  } else if (hoveringItem) {
+    canvas.style.cursor = "grab"; // Set grab if hovering over an item
+  } else {
+    canvas.style.cursor = "crosshair"; // Default cursor otherwise
+  }
+};
+
+const handleMouseDown = (e) => {
+  inGameItems.forEach(item => {
+    if (item.hover) {
+      item.held = true;
+      canvas.style.cursor = 'grabbing';
+    };
+  });
+};
+
+const handleMouseUp = (e) => {
+  inGameItems.forEach(item => {
+    if (item.held) {
+      const newFrameX = player.data.details.location.x + Math.floor((e.offsetX - 384) / 64);
+      const newFrameY = player.data.details.location.y + Math.floor((e.offsetY - 320) / 64);
+
+      // Ensure item can only be placed within the 8-frame range
+      // if (isItemInRangeOfPlayer({ worldPosition: { x: newFrameX, y: newFrameY } })) {
+        item.worldPosition.x = newFrameX;
+        item.worldPosition.y = newFrameY;
+        updateItemDrawPosition(item);
+      // }
+
+      item.held = false;
+    };
+  });
+
+  // Reset cursor after dropping item
+  canvas.style.cursor = 'crosshair';
+
+  drawAll(); // Redraw after moving an item
+};
 
 // handle player movement -------------------------------------------------------
-const tileSize = 64;
-const centerX = 384;
-const centerY = 320;
-
 const canMove = (boundaryTiles, newX, newY) => {
   return !boundaryTiles.some(boundary => 
     newX === boundary.dx && newY === boundary.dy
   );
+};
+
+const updateCursorAfterMove = () => {
+  const event = new MouseEvent("mousemove", {
+    clientX: lastMouseX, 
+    clientY: lastMouseY
+  });
+  canvas.dispatchEvent(event);
 };
 
 const playerMove = e => {
@@ -389,8 +410,8 @@ const playerMove = e => {
   player.direction = directionSprites[key]; // Always update facing direction
 
   if (e.shiftKey) {
-    // If Shift is held, only change direction, do not move
     drawAll();
+    updateCursorAfterMove(); // Ensure cursor updates even when just turning
     return;
   };
 
@@ -403,7 +424,8 @@ const playerMove = e => {
   };
 
   drawAll();
-  
+  updateCursorAfterMove(); // Simulate mouse movement to update cursor after movement
+
   player.cooldown = true;
   setTimeout(() => player.cooldown = false, player.speed * 1000);
 };
@@ -430,6 +452,7 @@ const handleLogin = async e => {
 
     document.querySelector('.background').remove();
     document.querySelector('.game-container')?.classList.remove('hidden');
+    canvas.style.cursor = 'crosshair';
     
     // gameLoop();
     drawAll();
@@ -478,17 +501,19 @@ addEventListener("DOMContentLoaded", e => {
   addEventListener('keydown', playerMove);
 
   canvas.addEventListener("mousedown", e => {
+    handleMouseDown(e);
     handleUiStates(e);
-    // handleMouseDown(e);
   });
 
   canvas.addEventListener("mousemove", e => {
+    handleMouseMove(e);
     handleUiStates(e);
-    // handleMouseMove(e);
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
   }); 
 
   canvas.addEventListener("mouseup", e => {
-    // handleMouseUp(e);
+    handleMouseUp(e);
   });
 
   // window.addEventListener('resize', resizeCanvas);
