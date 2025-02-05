@@ -30,6 +30,9 @@ const items = new Items();
 const creatures = new Creatures();
 // const animations = new Animations();
 
+const API_URL_PLAYER = '/savePlayerData';
+const API_URL_ITEMS = '/saveItemData';
+
 // movement variables
 const tileSize = 64;
 const centerX = 384;
@@ -38,6 +41,8 @@ let lastMouseX = 0;
 let lastMouseY = 0;
 
 // map variables
+const waterTileIDs = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+const uppermostTileIDs = [30, 31, 300, 301, 320, 321, 322, 323, 324, 340, 343, 360, 362, 363, 380, 383];
 let boundaryTiles = [];
 let waterTiles = [];
 let uppermostTiles = [];
@@ -48,7 +53,8 @@ let uiStance = 'passive';
 
 // item variables
 let inGameItems = [];
-inGameItems.push(new Item(0, 'sword', 'mainhand', { x: 64, y: 320 }, { x: 155, y: 187 })); // for testing
+
+// inGameItems.push(new Item('sword', generateHexId(), { x: 155, y: 187 }, { x: 64, y: 320 })); // for testing
 
 // contains all draw functions --------------------------------------------------
 const drawAll = () => {
@@ -97,9 +103,6 @@ const characterSheet = (player) => {
 };
 
 // draw screen ------------------------------------------------------------------
-const waterTileIDs = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-const uppermostTileIDs = [30, 31, 300, 301, 320, 321, 322, 323, 324, 340, 343, 360, 362, 363, 380, 383];
-
 const drawTile = (image, { sx, sy, dx, dy }) => {
   const tileSize = 64; // Fixed size for tiles
   ctx.drawImage(image, sx, sy, tileSize, tileSize, dx, dy, tileSize, tileSize);
@@ -255,11 +258,13 @@ const handleUiStates = (e) => {
 };
 
 // handle item behavior ---------------------------------------------------------
+const generateHexId = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
+
 const drawItem = (item) => {
+  updateItemDrawPosition(item);
+
   const { spritePosition, drawPosition } = item;
   const size = 64;
-
-  updateItemDrawPosition(item);
 
   ctx.drawImage(
     items.image,
@@ -304,6 +309,38 @@ const updateItemDrawPosition = (item) => {
 
   item.drawPosition.x = (item.worldPosition.x - visibleStartX) * 64;
   item.drawPosition.y = (item.worldPosition.y - visibleStartY) * 64;
+};
+
+const createNewItem = (name, location, coordinates = null) => {
+  const baseItem = resources.itemData.items.find(it => it.name === name);
+  if (!baseItem) {
+    console.error(`Item "${name}" not found in itemData.`);
+    return null;
+  };
+
+  // Create a deep copy of the item to prevent modifying the original
+  const newItem = {
+    ...baseItem,
+    id: generateHexId(),
+    category: location, // world, inventory, npc-corpse, etc.
+    worldPosition: location === "world" ? coordinates : null, // Only for world items
+    // drawPosition: destination, // Screen draw position (if needed)
+  };
+
+  inGameItems.push(newItem);
+  return newItem;
+};
+
+const populateInGameItems = () => {
+  if (!Array.isArray(resources.itemData.itemsInGame)) {
+    console.error("Error: itemsInGame is not an array.");
+    return;
+  };
+
+  inGameItems = resources.itemData.itemsInGame.map(item => ({
+    ...item, // Copy existing item properties
+    id: item.id || generateHexId(), // Ensure each item has a unique ID
+  }));
 };
 
 // mouse behavior ---------------------------------------------------------------
@@ -441,7 +478,8 @@ const handleLogin = async e => {
   const nameInput = document.querySelector('#playername').value.trim();
   const playerName = capitalizeWords(nameInput);
   player.data = resources.createPlayer(playerName);
-  resources.itemData.itemsInGame.length > 0 && inGameItems.push(resources.itemData.itemsInGame);
+  // resources.itemData.itemsInGame.length > 0 && inGameItems.push(resources.itemData.itemsInGame);
+  populateInGameItems();
   
   setTimeout(() => {
     const form = document.querySelector('.form-container');
@@ -461,18 +499,23 @@ const handleLogin = async e => {
 
 // handle player "logout" -------------------------------------------------------
 const updateLocalPlayerData = () => {
-  const playerToUpdateIndex = resources.playerData.playerlist.findIndex(user => user.id === player.data.id);
-  if (playerToUpdateIndex !== -1) {
-    resources.playerData.playerlist[playerToUpdateIndex] = player.data;
+  const playerIndex = resources.playerData.playerlist.findIndex(user => user.id === player.data.id);
+
+  if (playerIndex !== -1) {
+    resources.playerData.playerlist[playerIndex] = player.data;
   } else {
     console.warn('New player added.');
     resources.playerData.playerlist.push(player.data);
-  };
+  }
 };
 
-const postPlayerData = async data => {
+const updateLocalItemData = () => {
+  resources.itemData.itemsInGame = inGameItems.map(item => ({ ...item })); // Deep copy
+};
+
+const postGameData = async (url, data) => {
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -481,17 +524,21 @@ const postPlayerData = async data => {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to save player data. Server error.');
-    };
-
-  } catch(error) {
-    console.error('Error saving player data:', error.message);
-  };
+      throw new Error('Failed to save game data. Server error.');
+    }
+  } catch (error) {
+    console.error('Error saving game data:', error.message);
+  }
 };
 
-const updateAndPostPlayerData = async () => {
+const updateAndPostGameData = async () => {
   updateLocalPlayerData();
-  await postPlayerData(resources.playerData);
+  updateLocalItemData();
+
+  await Promise.all([
+    postGameData(API_URL_PLAYER, resources.playerData),
+    postGameData(API_URL_ITEMS, resources.itemData)
+  ]);
 };
 
 // event listeners --------------------------------------------------------------
@@ -519,7 +566,7 @@ addEventListener("DOMContentLoaded", e => {
   // window.addEventListener('resize', resizeCanvas);
 
   addEventListener('beforeunload', async (e) => {
-    await updateAndPostPlayerData();
+    await updateAndPostGameData();
   });
 });
 

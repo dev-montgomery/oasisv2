@@ -12,16 +12,29 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.post('/playerdata', async (req, res) => {
-  const filePath = path.join(__dirname, 'assets/player_data', 'player.json');
+const playerFilePath = path.join(__dirname, 'assets/player_data', 'player.json');
+const itemsFilePath = path.join(__dirname, 'assets/item_data', 'items.json');
 
+// Save Player Data
+app.post('/savePlayerData', async (req, res) => {
   try {
-    await fs.writeJson(filePath, req.body, { spaces: 2 });
+    await fs.writeJson(playerFilePath, req.body, { spaces: 2 });
     res.status(200).json({ success: true, message: 'Player data saved successfully.' });
   } catch (error) {
-    console.error('Error saving player data:', error.message || error);
+    console.error('Error saving player data:', error);
     res.status(500).json({ success: false, message: 'Failed to save player data.' });
-  };
+  }
+});
+
+// Save Item Data
+app.post('/saveItemData', async (req, res) => {
+  try {
+    await fs.writeJson(itemsFilePath, req.body, { spaces: 2 });
+    res.status(200).json({ success: true, message: 'Item data saved successfully.' });
+  } catch (error) {
+    console.error('Error saving item data:', error);
+    res.status(500).json({ success: false, message: 'Failed to save item data.' });
+  }
 });
 
 // Start the server

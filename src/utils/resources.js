@@ -7,19 +7,19 @@ class Resources {
     };
 
     this.mapData = {};
-    this.playerData = {};
-    this.itemData = {};
+    this.playerData = {}; // Stores player.json data
+    this.itemData = {};   // Stores items.json data
 
     this.loadData();
-  };
+  }
 
   async fetchJson(url) {
     const response = await fetch(`${BASE_URL}${url}`);
     if (!response.ok) {
       throw new Error(`Fetch error for ${url}`);
-    };
+    }
     return response.json();
-  };
+  }
 
   async loadData() {
     try {
@@ -31,8 +31,8 @@ class Resources {
       console.log('All data loaded successfully.');
     } catch (error) {
       console.error('Error loading data:', error);
-    };
-  };
+    }
+  }
 
   async loadMapData() {
     const mapPromises = Object.keys(this.mapJsonToLoad).map(async (key) => {
@@ -42,40 +42,44 @@ class Resources {
 
     await Promise.all(mapPromises);
     this.mapData.isLoaded = true;
-  };
+  }
 
   async loadPlayerData() {
-    this.playerData = await this.fetchJson('player_data/player.json');
+    const data = await this.fetchJson('player_data/player.json');
+    this.playerData = data; // No extra nesting!
     this.playerData.isLoaded = true;
-  };
+    console.log('Player data loaded:', this.playerData);
+  }
+
+  async loadItemData() {
+    const data = await this.fetchJson('item_data/items.json');
+    this.itemData = data; // No extra nesting!
+    this.itemData.isLoaded = true;
+    console.log('Item data loaded:', this.itemData);
+  }
 
   playerExists(playername) {
     return this.playerData.playerlist.some(player => player.name === playername);
-  };
+  }
 
   createPlayer(playername) {
-    if (this.playerData.playerlist[0] === null) this.playerData.playerlist.pop();
+    if (this.playerData.playerlist.length === 0) this.playerData.playerlist = [];
+
     if (this.playerExists(playername)) {
       console.log(`Logged in as ${playername}.`);
-      const returningPlayer = this.playerData.playerlist.find(player => player.name === playername);
-      return returningPlayer;
-    };;
+      return this.playerData.playerlist.find(player => player.name === playername);
+    }
 
     const newPlayer = {
       id: this.playerData.playerlist.length + 1,
       name: playername,
-      details: this.playerData.newplayer
+      details: { ...this.playerData.newplayer }
     };
 
     this.playerData.playerlist.push(newPlayer);
     console.log(`New player ${playername} added.`);
     return newPlayer;
-  };
-
-  async loadItemData() {
-    this.itemData = await this.fetchJson('item_data/items.json');
-    this.itemData.isLoaded = true;
-  };
-};
+  }
+}
 
 export const resources = new Resources();
