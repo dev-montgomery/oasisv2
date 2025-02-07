@@ -1,26 +1,25 @@
 import { resources } from './src/utils/resources.js';
 import { Player, Area, UiElements, Items, Item, Creatures } from './src/utils/classes.js';
-
-const API_URL = 'http://localhost:3000/playerdata';
-
-// canvas and context and screen sizes ------------------------------------------
-const canvas = document.querySelector('canvas');
-const ctx = canvas.getContext('2d');
-
-canvas.width = 1024;
-canvas.height = 704;
-const uiWidth = 192;
-
-const screen = {
-  frames: { row: 11, col: 13 }, 
-  width: canvas.width - uiWidth, 
-  height: canvas.height 
-};
-
-const game = document.querySelector('.game-container');
-game.on = false;
-
-const chat = { open: false };
+import { characterSheet } from './src/components/stats.js';
+import { generateHexId, getMousePosition } from './src/utils/utils.js';
+import { 
+  API_URL_PLAYER, 
+  API_URL_ITEMS, 
+  canvas, 
+  ctx, 
+  renderArea, 
+  game, 
+  chat, 
+  tileSize, 
+  centerX, 
+  centerY, 
+  waterTileIDs, 
+  uppermostTileIDs,
+  equipSlots, 
+  equipSlotSize, 
+  inventorySlots, 
+  inventorySlotSize
+} from './src/components/const.js';
 
 // init sprite assets ------------------------------------------------------------------
 const player = new Player();
@@ -30,19 +29,11 @@ const items = new Items();
 const creatures = new Creatures();
 // const animations = new Animations();
 
-const API_URL_PLAYER = '/savePlayerData';
-const API_URL_ITEMS = '/saveItemData';
-
 // movement variables
-const tileSize = 64;
-const centerX = 384;
-const centerY = 320;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
 // map variables
-const waterTileIDs = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-const uppermostTileIDs = [30, 31, 300, 301, 320, 321, 322, 323, 324, 340, 343, 360, 362, 363, 380, 383];
 let boundaryTiles = [];
 let waterTiles = [];
 let uppermostTiles = [];
@@ -54,8 +45,6 @@ let uiStance = 'passive';
 // item variables
 let inGameItems = [];
 
-// inGameItems.push(new Item('sword', generateHexId(), { x: 155, y: 187 }, { x: 64, y: 320 })); // for testing
-
 // contains all draw functions --------------------------------------------------
 const drawAll = () => {
   // Populate Character Sheet
@@ -64,45 +53,20 @@ const drawAll = () => {
   // Draw the map (background) and Player
   drawArea();
 
-  // Draw all non-player items like objects or enemies
-  inGameItems.forEach(item => isItemVisible(item) && drawItem(item));
+  // Draw UI elements last so they appear on top
+  drawUi();
 
+  // Draw all non-player items like objects or enemies
+  inGameItems.forEach(item => isItemInRenderArea(item) && drawItem(item));
+  
   // Draw player before uppermost layer
   player.draw(ctx);
 
   // Draw upper tiles after all others
   uppermostTiles.forEach(tileData => drawTile(area.image, tileData));
-
-  // Draw UI elements last so they appear on top
-  drawUi();
 };
 
-// character sheet section ------------------------------------------------------
-const characterSheet = (player) => {
-  const container = document.querySelector(".player-details-container");
-  if (!container) return;
-
-  container.innerHTML = `
-    <h2>${player.name}</h2>
-    <p><strong>level:</strong> ${player.details.lvls.lvl}</p>
-    <p><strong>m.level:</strong> ${player.details.lvls.mglvl}</p>
-    <br>
-    <p><strong>health:</strong> ${player.details.stats.health}</p>
-    <p><strong>magic:</strong> ${player.details.stats.magic}</p>
-    <p><strong>capacity:</strong> ${player.details.stats.capacity}</p>
-    <p><strong>speed:</strong> ${player.details.stats.speed}</p>
-    <br>
-    <p><strong>fist:</strong> ${player.details.skills.fist}</p>
-    <p><strong>sword:</strong> ${player.details.skills.sword}</p>
-    <p><strong>axe:</strong> ${player.details.skills.axe}</p>
-    <p><strong>blunt:</strong> ${player.details.skills.blunt}</p>
-    <p><strong>distance:</strong> ${player.details.skills.distance}</p>
-    <p><strong>shield:</strong> ${player.details.skills.shield}</p>
-    <p><strong>fishing:</strong> ${player.details.skills.fishing}</p>
-  `;
-};
-
-// draw screen ------------------------------------------------------------------
+// draw renderArea ------------------------------------------------------------------
 const drawTile = (image, { sx, sy, dx, dy }) => {
   const tileSize = 64; // Fixed size for tiles
   ctx.drawImage(image, sx, sy, tileSize, tileSize, dx, dy, tileSize, tileSize);
@@ -115,16 +79,16 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
 
   // Calculate starting tile based on the player position
   const startingTile = {
-    x: player.data.details.location.x - Math.floor(screen.frames.col / 2),
-    y: player.data.details.location.y - Math.floor(screen.frames.row / 2),
+    x: player.data.details.location.x - Math.floor(renderArea.size.col / 2),
+    y: player.data.details.location.y - Math.floor(renderArea.size.row / 2),
   };
 
   // Generate the visible map
   const visibleMap = currentMap.map(layer => {
     let tiles = [];
     let currentNum = area.mapDimensions.col * (startingTile.y - 1) + startingTile.x;
-    for (let i = 0; i < screen.frames.row; i++) {
-      tiles.push(...layer.data.slice(currentNum, currentNum + screen.frames.col));
+    for (let i = 0; i < renderArea.size.row; i++) {
+      tiles.push(...layer.data.slice(currentNum, currentNum + renderArea.size.col));
       currentNum += area.mapDimensions.col;
     };
     return tiles;
@@ -137,8 +101,8 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
       if (tileID > 0) {
         const sx = Math.floor((tileID - 1) % 20) * area.pixels; // Source x on spritesheet
         const sy = Math.floor((tileID - 1) / 20) * area.pixels; // Source y on spritesheet
-        const dx = Math.floor(i % screen.frames.col) * area.pixels; // Destination x on canvas
-        const dy = Math.floor(i / screen.frames.col) * area.pixels; // Destination y on canvas
+        const dx = Math.floor(i % renderArea.size.col) * area.pixels; // Destination x on canvas
+        const dy = Math.floor(i / renderArea.size.col) * area.pixels; // Destination y on canvas
         const tileData = { sx, sy, dx, dy };
   
         if (tileID === 10 || tileID === 11) {
@@ -159,10 +123,10 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
 // draw ui elements -------------------------------------------------------------
 const drawUi = () => {
   const { image, pixels, top, inventory, toggle, stance, state } = uiElements;
-  const uiXOffset = screen.width + 4; // Add 4-pixel gap from the screen width
+  const uiXOffset = renderArea.width + 4; // Add 4-pixel gap from the renderArea width
   
   // Clear UI section
-  ctx.clearRect(uiXOffset, 0, uiWidth, screen.height);
+  ctx.clearRect(uiXOffset, 0, canvas.uiWidth, renderArea.height);
 
   // Draw a generic section
   const drawSection = (sprite, location, width, height) => {
@@ -216,6 +180,8 @@ const drawUi = () => {
   } else if (uiStance === 'passive') {
     drawStance(stance.passive, stance.passiveLocation);
   };
+
+  uiState === "inventory" && inGameItems.forEach(item => item.category === "equipped" && drawItem(item));
 };
 
 const handleUiStates = (e) => {
@@ -258,10 +224,28 @@ const handleUiStates = (e) => {
 };
 
 // handle item behavior ---------------------------------------------------------
-const generateHexId = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
+const createNewItem = (name, location, coordinates = null) => {
+  const baseItem = resources.itemData.items.find(it => it.name === name);
+  if (!baseItem) {
+    console.error(`Item "${name}" not found in itemData.`);
+    return null;
+  };
+
+  // Create a deep copy of the item to prevent modifying the original
+  const newItem = {
+    ...baseItem,
+    id: generateHexId(),
+    category: location, // world, inventory, npc-corpse, etc.
+    worldPosition: location === "world" ? coordinates : null, // Only for world items
+    // drawPosition: destination, // renderArea draw position (if needed)
+  };
+
+  inGameItems.push(newItem);
+  return newItem;
+};
 
 const drawItem = (item) => {
-  updateItemDrawPosition(item);
+  if (item.worldPosition) updateItemDrawPosition(item);
 
   const { spritePosition, drawPosition } = item;
   const size = 64;
@@ -279,56 +263,47 @@ const drawItem = (item) => {
   );
 };
 
-const isItemVisible = (item) => {
-  const visibleStartX = player.data.details.location.x - Math.floor(screen.frames.col / 2);
-  const visibleEndX = visibleStartX + screen.frames.col - 1;
-  const visibleStartY = player.data.details.location.y - Math.floor(screen.frames.row / 2);
-  const visibleEndY = visibleStartY + screen.frames.row - 1;
-
-  return (
-    item.worldPosition.x >= visibleStartX &&
-    item.worldPosition.x <= visibleEndX &&
-    item.worldPosition.y >= visibleStartY &&
-    item.worldPosition.y <= visibleEndY
+const isItemInRenderArea = (item) => {
+  const inRenderArea = (
+    item.worldPosition !== null &&
+    item.worldPosition.x >= 0 &&
+    item.worldPosition.x < renderArea.width &&
+    item.worldPosition.y >= 0 &&
+    item.worldPosition.y < renderArea.height
   );
+
+  // const inEquipSlot = Object.values(equipSlots).some(({ x, y }) =>
+  //   item.drawPosition.x === x + renderArea.width && item.drawPosition.y === y
+  // );
+
+  // const inInventorySlot = Object.values(inventorySlots).some(({ x, y }) =>
+  //   item.drawPosition.x === x + renderArea.width && item.drawPosition.y === y
+  // );
+
+  return inRenderArea;
 };
 
 const isItemInRangeOfPlayer = (item) => {
   const playerFrameX = player.data.details.location.x;
   const playerFrameY = player.data.details.location.y;
 
-  const dx = Math.abs(item.worldPosition.x - playerFrameX);
-  const dy = Math.abs(item.worldPosition.y - playerFrameY);
+  const dx = item.worldPosition && Math.abs(item.worldPosition.x - playerFrameX);
+  const dy = item.worldPosition && Math.abs(item.worldPosition.y - playerFrameY);
   
   return dx <= 1 && dy <= 1; // Ensures the item is in the player's frame or an adjacent frame
 };
 
 const updateItemDrawPosition = (item) => {
-  const visibleStartX = player.data.details.location.x - Math.floor(screen.frames.col / 2);
-  const visibleStartY = player.data.details.location.y - Math.floor(screen.frames.row / 2);
+  const { x: playerX, y: playerY } = player.data.details.location;
+  const { col, row } = renderArea.size;
 
-  item.drawPosition.x = (item.worldPosition.x - visibleStartX) * 64;
-  item.drawPosition.y = (item.worldPosition.y - visibleStartY) * 64;
-};
+  const visibleStartX = playerX - Math.floor(col / 2);
+  const visibleStartY = playerY - Math.floor(row / 2);
 
-const createNewItem = (name, location, coordinates = null) => {
-  const baseItem = resources.itemData.items.find(it => it.name === name);
-  if (!baseItem) {
-    console.error(`Item "${name}" not found in itemData.`);
-    return null;
-  };
-
-  // Create a deep copy of the item to prevent modifying the original
-  const newItem = {
-    ...baseItem,
-    id: generateHexId(),
-    category: location, // world, inventory, npc-corpse, etc.
-    worldPosition: location === "world" ? coordinates : null, // Only for world items
-    // drawPosition: destination, // Screen draw position (if needed)
-  };
-
-  inGameItems.push(newItem);
-  return newItem;
+  const newX = (item.worldPosition.x - visibleStartX) * 64;
+  const newY = (item.worldPosition.y - visibleStartY) * 64;
+  
+  Object.assign(item.drawPosition, { x: newX, y: newY });
 };
 
 const populateInGameItems = () => {
@@ -343,6 +318,54 @@ const populateInGameItems = () => {
   }));
 };
 
+// Equip item if valid
+const moveToEquip = (item, slot) => {
+  if (item.type !== slot) return; // Prevent equipping wrong type
+  // Update player data
+  player.data.details.equipped[slot] = item.id;
+
+  // Update item properties
+  item.category = "equipped";
+  item.worldPosition = null; // No longer in the game world
+  item.drawPosition.x = equipSlots[slot].x;
+  item.drawPosition.y = equipSlots[slot].y;
+
+  console.log(`Equipped ${item.name} in ${slot} slot.`)
+  drawAll();
+};
+
+// Unequip item and return to world
+const unequipItem = (item) => {
+  const equippedSlot = Object.keys(player.data.details.equipped).find(
+    slot => player.data.details.equipped[slot] === item.id
+  );
+
+  if (!equippedSlot) return; // Item wasn't equipped
+
+  // Remove from equipped data
+  player.data.details.equipped[equippedSlot] = "empty";
+  console.log(`Unequipped ${item.name} from ${equippedSlot} slot.`);
+
+  // Restore item properties
+  item.category = "world";
+};
+
+const getEquipSlotUnderCursor = (e) => {
+  if (uiState !== "inventory") return null;
+
+  const mouseX = e.clientX - canvas.offsetLeft;
+  const mouseY = e.clientY - canvas.offsetTop;
+
+  return Object.entries(equipSlots).find(([_, { x, y }]) =>
+    mouseX >= x && mouseX <= x + 64 &&
+    mouseY >= y && mouseY <= y + 64
+  )?.[0] || null; // Returns slot name or null
+};
+
+const getInventorySlotUnderCursor = (e) => {
+
+};
+
 // mouse behavior ---------------------------------------------------------------
 const handleMouseMove = (e) => {
   const { offsetX, offsetY } = e;
@@ -352,11 +375,13 @@ const handleMouseMove = (e) => {
   if (uiCursor) {
     canvas.style.cursor = uiCursor;
     return; // Exit early if over a UI element
-  }
+  };
 
-  let hoveringItem = null;
+  let topItem = null;
 
-  inGameItems.forEach(item => {
+  // Iterate in reverse to prioritize the topmost item
+  for (let i = inGameItems.length - 1; i >= 0; i--) {
+    const item = inGameItems[i];
     const isHovered =
       offsetX >= item.drawPosition.x &&
       offsetX <= item.drawPosition.x + 64 &&
@@ -364,13 +389,19 @@ const handleMouseMove = (e) => {
       offsetY <= item.drawPosition.y + 64 &&
       isItemInRangeOfPlayer(item);
 
-    item.hover = isHovered;
-    if (isHovered) hoveringItem = item;
-  });
+    if (isHovered) {
+      topItem = item;
+      break; // Stop at the first (topmost) item
+    };
+  };
 
+  // Update hover states
+  inGameItems.forEach(item => item.hover = item === topItem);
+
+  // Update cursor appearance
   if (inGameItems.some(item => item.held)) {
     canvas.style.cursor = "grabbing"; // Keep grabbing if an item is held
-  } else if (hoveringItem) {
+  } else if (topItem) {
     canvas.style.cursor = "grab"; // Set grab if hovering over an item
   } else {
     canvas.style.cursor = "crosshair"; // Default cursor otherwise
@@ -391,13 +422,27 @@ const handleMouseUp = (e) => {
     if (item.held) {
       const newFrameX = player.data.details.location.x + Math.floor((e.offsetX - 384) / 64);
       const newFrameY = player.data.details.location.y + Math.floor((e.offsetY - 320) / 64);
+      const newWorldPosition = { x: newFrameX, y: newFrameY };
 
-      // Ensure item can only be placed within the 8-frame range
-      // if (isItemInRangeOfPlayer({ worldPosition: { x: newFrameX, y: newFrameY } })) {
-        item.worldPosition.x = newFrameX;
-        item.worldPosition.y = newFrameY;
+      const equipSlot = getEquipSlotUnderCursor(e);
+      const inventorySlot = getInventorySlotUnderCursor(e);
+
+      if (equipSlot && uiState === 'inventory') {
+        moveToEquip(item, equipSlot);
+
+      } else if (inventorySlot && uiState === 'inventory') {
+        // moveToInventory(item, slot);
+
+      } else if (
+        newWorldPosition.x >= 0 &&
+        newWorldPosition.x < renderArea.width &&
+        newWorldPosition.y >= 0 &&
+        newWorldPosition.y < renderArea.height
+      ) {
+        item.worldPosition = newWorldPosition;
+        unequipItem(item);
         updateItemDrawPosition(item);
-      // }
+      };
 
       item.held = false;
     };
@@ -425,7 +470,7 @@ const updateCursorAfterMove = () => {
 };
 
 const playerMove = e => {
-  if (!game.on || chat.open || player.cooldown) return;
+  if (!game.on || chat.on || player.cooldown) return;
 
   const movementOffsets = {
     'w': { x: 0, y: -tileSize },
@@ -499,6 +544,9 @@ const handleLogin = async e => {
 
 // handle player "logout" -------------------------------------------------------
 const updateLocalPlayerData = () => {
+  // Remove any `null` values from the array
+  resources.playerData.playerlist = resources.playerData.playerlist.filter(user => user !== null);
+
   const playerIndex = resources.playerData.playerlist.findIndex(user => user.id === player.data.id);
 
   if (playerIndex !== -1) {
@@ -506,7 +554,7 @@ const updateLocalPlayerData = () => {
   } else {
     console.warn('New player added.');
     resources.playerData.playerlist.push(player.data);
-  }
+  };
 };
 
 const updateLocalItemData = () => {
@@ -584,3 +632,26 @@ function gameLoop() {
   // Call the next frame
   requestAnimationFrame(gameLoop);
 };
+
+/*
+/game
+  ├── index.js          (Main entry point)
+  ├── config.js         (Game settings, constants)
+  ├── engine.js         (Game loop and core engine logic)
+  ├── renderer.js       (Handles rendering logic)
+  ├── player.js         (Handles player movement and logic)
+  ├── world.js          (World map, boundaries, and collisions)
+  ├── items.js          (Item handling, interactions)
+  ├── ui.js             (UI management - inventory, equip section)
+  ├── events.js         (Event listeners, key/mouse input handling)
+*/
+
+/* 
+function getMousePosition(event) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+};
+*/

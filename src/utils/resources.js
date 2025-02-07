@@ -48,14 +48,14 @@ class Resources {
     const data = await this.fetchJson('player_data/player.json');
     this.playerData = data; // No extra nesting!
     this.playerData.isLoaded = true;
-    console.log('Player data loaded:', this.playerData);
+    // console.log('Player data loaded:', this.playerData);
   }
 
   async loadItemData() {
     const data = await this.fetchJson('item_data/items.json');
     this.itemData = data; // No extra nesting!
     this.itemData.isLoaded = true;
-    console.log('Item data loaded:', this.itemData);
+    // console.log('Item data loaded:', this.itemData);
   }
 
   playerExists(playername) {

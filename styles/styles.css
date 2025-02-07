@@ -106,6 +106,12 @@ p, h1, h2, h3, h4, h5, h6 {
   flex-direction: row;
   justify-content: center;
   align-items: center;
+  padding: 6px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: hsl(60, 25%, 30%) hsl(60, 25%, 20%) hsl(60, 25%, 20%) hsl(60, 25%, 30%);
+  /* border-color: hsl(60, 25%, 35%) hsl(60, 25%, 20%) hsl(60, 25%, 20%) hsl(60, 25%, 35%);   */
+  /* border-color: hsl(60, 25%, 20%); */
 }
 
 /* Lefthand-side */
