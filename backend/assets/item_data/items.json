@@ -11,6 +11,42 @@
       "description": "A proper blade.",
       "value": 100,
       "spritePosition": { "x": 64, "y": 320 }
+    },
+    {
+      "name": "pendant",
+      "type": "neck",
+      "stats": {
+        "magic": 6,
+        "weight": 5
+      },
+      "rarity": "uncommon",
+      "description": "A pendant made with an unsual jewel.",
+      "value": 400,
+      "spritePosition": { "x": 64, "y": 64 }
+    },
+    {
+      "name": "backpack",
+      "type": "back",
+      "stats": {
+        "slots": 20,
+        "weight": 5
+      },
+      "rarity": "common",
+      "description": "It's a red backpack.",
+      "value": 150,
+      "spritePosition": { "x": 64, "y": 0 }
+    },
+    {
+      "name": "targe",
+      "type": "offhand",
+      "stats": {
+        "defense": 10,
+        "weight": 15
+      },
+      "rarity": "common",
+      "description": "At least it's not made of wood.",
+      "value": 200,
+      "spritePosition": { "x": 64, "y": 512 }
     }
   ],
   "itemsInGame": [
@@ -27,7 +63,55 @@
       "description": "A proper blade.",
       "value": 100,
       "spritePosition": { "x": 64, "y": 320 },
-      "worldPosition": { "x": 155, "y": 187 },
+      "worldPosition": { "x": 154, "y": 188 },
+      "drawPosition": { "x": null, "y": null }
+    },
+    {
+      "id": 2,
+      "name": "pendant",
+      "type": "neck",
+      "category": "world",
+      "stats": {
+        "magic": 6,
+        "weight": 5
+      },
+      "rarity": "uncommon",
+      "description": "A pendant made with an unsual jewel.",
+      "value": 400,
+      "spritePosition": { "x": 64, "y": 64 },
+      "worldPosition": { "x": 155, "y": 188 },
+      "drawPosition": { "x": null, "y": null }
+    },
+    {
+      "id": 3,
+      "name": "backpack",
+      "type": "back",
+      "category": "world",
+      "stats": {
+        "slots": 20,
+        "weight": 5
+      },
+      "rarity": "common",
+      "description": "It's a red backpack.",
+      "value": 150,
+      "spritePosition": { "x": 64, "y": 0 },
+      "worldPosition": { "x": 156, "y": 188 },
+      "drawPosition": { "x": null, "y": null }
+    },
+    {
+      "id": 4,
+      "name": "targe",
+      "type": "offhand",
+      "category": "world",
+      "stats": {
+        "defense": 10,
+        "weight": 15
+      },
+      "rarity": "common",
+      "description": "At least it's not made of wood.",
+      "value": 200,
+      "spritePosition": { "x": 64, "y": 512 },
+      "worldPosition": { "x": 155, "y": 190 },
       "drawPosition": { "x": null, "y": null }
     }
   ]
