@@ -50,17 +50,29 @@ const equipSlots = {
 };
 
 const inventorySlots = {
+  arrows: { // sprite locations
+    upActive: { x: 128, y: 640 + 16 }, 
+    upInactive: { x: 192, y: 640  + 16 }, 
+    downActive: { x: 256, y: 640  + 16 }, 
+    downInactive: { x: 320, y: 640  + 16 } 
+  },
+  arrowDrawPositions: { 
+    firstArea: { 
+      up: { x: renderArea.width, y: 192 + 64 },
+      down: { x: renderArea.width + 128, y: 192 + 64 }
+    },
+    secondArea: { 
+      up: { x: renderArea.width, y: 192 + 64 + 32 + 160 },
+      down: { x: renderArea.width + 128, y: 192 + 64 + 32 + 160 }
+    }
+  },
   primary: {
-    1: {}, 2: {}, 3: {}, 4: {}, 5: {},
-    6: {}, 7: {}, 8: {}, 9: {}, 10: {},
-    11: {}, 12: {}, 13: {}, 14: {}, 15: {},
-    16: {}, 17: {}, 18: {}, 19: {}, 20: {},
+    header: { x: renderArea.width, y: 192 + 64, width: 192, height: 32 },
+    primarySlots: { x: renderArea.width, y: 192 + 64 + 32, width: 192, height: 160, fullHeight: 352 },
   },
   secondary: {
-    1: {}, 2: {}, 3: {}, 4: {}, 5: {},
-    6: {}, 7: {}, 8: {}, 9: {}, 10: {},
-    11: {}, 12: {}, 13: {}, 14: {}, 15: {},
-    16: {}, 17: {}, 18: {}, 19: {}, 20: {},
+    header: { x: renderArea.width, y: 192 + 64 + 32 + 160, width: 192, height: 32 },
+    secondarySlots: { x: renderArea.width, y: 192 + 64 + 32 + 160 + 32, width: 192, height: 160 }
   }
 };
 

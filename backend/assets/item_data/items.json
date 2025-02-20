@@ -27,6 +27,7 @@
     {
       "name": "backpack",
       "type": "back",
+      "contents": [],
       "stats": {
         "slots": 20,
         "weight": 5
@@ -87,6 +88,7 @@
       "name": "backpack",
       "type": "back",
       "category": "world",
+      "contents": [],
       "stats": {
         "slots": 20,
         "weight": 5

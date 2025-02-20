@@ -1,25 +1,32 @@
-const characterSheet = (player) => {
+export const characterSheet = (player) => {
   const container = document.querySelector(".player-details-container");
   if (!container) return;
 
+  const currOffense = player.details.equipped.mainhand;
+  const currDefense = player.details.equipped.offhand;
+  
   container.innerHTML = `
-    <h2>${player.name}</h2>
-    <p><strong>level:</strong> ${player.details.lvls.lvl}</p>
-    <p><strong>m.level:</strong> ${player.details.lvls.mglvl}</p>
-    <br>
-    <p><strong>health:</strong> ${player.details.stats.health}</p>
-    <p><strong>magic:</strong> ${player.details.stats.magic}</p>
-    <p><strong>capacity:</strong> ${player.details.stats.capacity}</p>
-    <p><strong>speed:</strong> ${player.details.stats.speed}</p>
-    <br>
-    <p><strong>fist:</strong> ${player.details.skills.fist}</p>
-    <p><strong>sword:</strong> ${player.details.skills.sword}</p>
-    <p><strong>axe:</strong> ${player.details.skills.axe}</p>
-    <p><strong>blunt:</strong> ${player.details.skills.blunt}</p>
-    <p><strong>distance:</strong> ${player.details.skills.distance}</p>
-    <p><strong>shield:</strong> ${player.details.skills.shield}</p>
-    <p><strong>fishing:</strong> ${player.details.skills.fishing}</p>
+    <div class="player-details-container-border noselect">
+      <h2>${player.name}</h2>
+      
+      <p><strong>Level:</strong> ${player.details.lvls.lvl}</p>
+      <p><strong>Magic Level:</strong> ${player.details.lvls.mglvl}</p>
+      <br>
+      <p><strong>Health:</strong> ${player.details.stats.health}</p>
+      <p><strong>Magic:</strong> ${player.details.stats.magic}</p>
+      <p><strong>Capacity:</strong> ${player.details.stats.capacity}</p>
+      <br>
+      <p><strong>Fishing:</strong> ${player.details.skills.fishing}</p>
+      <p>
+        <strong>
+          ${typeof currOffense === 'object' ? currOffense.name.charAt(0).toUpperCase() + currOffense.name.slice(1) + ':' : ''} 
+        </strong> ${typeof currOffense === 'object' ? player.details.skills[currOffense.name] : ''}
+      </p>
+      <p>
+        <strong>
+          ${typeof currDefense === 'object' ? 'Defense:' : ''} 
+        </strong> ${typeof currDefense === 'object' ? player.details.skills.shield : ''}
+      </p>
+    </div>
   `;
 };
-
-export { characterSheet };

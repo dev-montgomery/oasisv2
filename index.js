@@ -21,31 +21,30 @@ import {
   inventorySlotSize
 } from './src/components/const.js';
 
-// init sprite assets ------------------------------------------------------------------
+// Initiations
 const player = new Player();
 const area = new Area();
 const uiElements = new UiElements();
 const items = new Items();
 const creatures = new Creatures();
-// const animations = new Animations();
 
-// movement variables
 let lastMouseX = 0;
 let lastMouseY = 0;
-
-// map variables
 let boundaryTiles = [];
 let waterTiles = [];
 let uppermostTiles = [];
-
-// ui variables
 let uiState = 'player';
 let uiStance = 'passive';
-
-// item variables
 let inGameItems = [];
+let heldItem = null;
+let lastValidPosition = null;
 
-// contains all draw functions --------------------------------------------------
+const inventory = {
+  one: { item: null, open: false },
+  two: { item: null, open: false }
+};
+
+// Draw Functions
 const drawAll = () => {
   // Populate Character Sheet
   characterSheet(player.data);
@@ -55,14 +54,20 @@ const drawAll = () => {
 
   // Draw UI elements last so they appear on top
   drawUi();
-
+  // drawInventory();
   // Draw all non-player items like objects or enemies
   inGameItems.forEach(item => {
-      if (
-        isInRenderArea(item) ||
-        isInEquipArea(item) ||
-        isInInventoryArea(item)
-      ) { drawItem(item) }; 
+    if (isInRenderArea(item) && item.category === 'world') {
+      drawItem(item);
+    };
+    
+    if (isInEquipArea(item) && item.category === 'equipped' && uiState === 'inventory') {
+      drawItem(item);
+    };
+
+    // if (isInInventoryArea(item) && item.category === 'inventory') {
+    //   drawItem(item); 
+    // };
   });
   
   // Draw player before uppermost layer
@@ -72,7 +77,6 @@ const drawAll = () => {
   uppermostTiles.forEach(tileData => drawTile(area.image, tileData));
 };
 
-// draw renderArea ------------------------------------------------------------------
 const drawTile = (image, { sx, sy, dx, dy }) => {
   const tileSize = 64; // Fixed size for tiles
   ctx.drawImage(image, sx, sy, tileSize, tileSize, dx, dy, tileSize, tileSize);
@@ -126,7 +130,6 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
   });
 };
 
-// draw ui elements -------------------------------------------------------------
 const drawUi = () => {
   const { image, pixels, top, inventory, toggle, stance, state } = uiElements;
   const uiXOffset = renderArea.width + 4; // Add 4-pixel gap from the renderArea width
@@ -190,6 +193,26 @@ const drawUi = () => {
   uiState === "inventory" && inGameItems.forEach(item => item.category === "equipped" && drawItem(item));
 };
 
+const drawItem = (item) => {
+  if (item.worldPosition) updateItemDrawPosition(item);
+
+  const { spritePosition, drawPosition } = item;
+  const size = 64;
+
+  ctx.drawImage(
+    items.image,
+    spritePosition.x,
+    spritePosition.y,
+    size,
+    size,
+    drawPosition.x,
+    drawPosition.y,
+    size,
+    size
+  );
+};
+
+// Handle ui
 const handleUiStates = (e) => {
   const { toggle, stance } = uiElements;
   const { offsetX, offsetY, type } = e;
@@ -229,19 +252,7 @@ const handleUiStates = (e) => {
   );
 };
 
-// handle item behavior ---------------------------------------------------------
-const populateInGameItems = () => {
-  if (!Array.isArray(resources.itemData.itemsInGame)) {
-    console.error("Error: itemsInGame is not an array.");
-    return;
-  };
-
-  inGameItems = resources.itemData.itemsInGame.map(item => ({
-    ...item, // Copy existing item properties
-    id: generateHexId(), // Ensure each item has a unique ID
-  }));
-};
-
+// Handle item behavior
 const createNewItem = (name, location, coordinates = null) => {
   const baseItem = resources.itemData.items.find(it => it.name === name);
   if (!baseItem) {
@@ -262,23 +273,113 @@ const createNewItem = (name, location, coordinates = null) => {
   return newItem;
 };
 
-const drawItem = (item) => {
-  if (item.worldPosition) updateItemDrawPosition(item);
+const populateInGameItems = () => {
+  if (!Array.isArray(resources.itemData.itemsInGame)) {
+    console.error("Error: itemsInGame is not an array.");
+    return;
+  };
 
-  const { spritePosition, drawPosition } = item;
-  const size = 64;
+  inGameItems = resources.itemData.itemsInGame.map(item => ({
+    ...item, // Copy existing item properties
+    id: generateHexId(), // Ensure each item has a unique ID
+  }));
+};
 
-  ctx.drawImage(
-    items.image,
-    spritePosition.x,
-    spritePosition.y,
-    size,
-    size,
-    drawPosition.x,
-    drawPosition.y,
-    size,
-    size
-  );
+const updateItemsArray = (item) => {
+  const index = inGameItems.findIndex(curr => curr.id === item.id);
+
+  if(index > -1) {
+    inGameItems.splice(index, 1);
+    inGameItems.push(item);
+  };
+};
+
+const moveToEquip = (item, slot) => {
+  if (!item || item.type !== slot) return; // Ensure valid item type
+  
+  const existingItem = player.data.details.equipped[slot];
+
+  if (typeof(existingItem) === 'object') {
+    if (existingItem.id === item.id) return; 
+    
+    // Swap items
+    Object.assign(existingItem, {
+      category: 'world',
+      worldPosition: item.worldPosition,
+      held: false
+    });
+    
+    updateItemDrawPosition(existingItem);
+  };
+  
+  // Equip new item
+  Object.assign(item, {
+    category: 'equipped',
+    worldPosition: null,
+    drawPosition: { x: equipSlots[slot].x, y: equipSlots[slot].y },
+    held: false
+  });
+
+  console.log(`Equipped ${item.name} in ${slot} slot.`);
+  player.data.details.equipped[slot] = item;
+  updateItemsArray(item);
+  
+  drawAll();
+};
+
+const moveToInventory = (item, slot) => {
+  if (!item || !slot) return;
+  return;
+};
+
+const moveToRenderArea = (item, newFrameX, newFrameY) => {
+  const equippedItem = inGameItems.find(equipped => equipped.id === item.id);
+
+  if (equippedItem) {
+    Object.assign(item, {
+      category: 'world',
+      worldPosition: { x: newFrameX, y: newFrameY },
+      held: false
+    });
+
+    player.data.details.equipped[item.type] = 'empty';
+  } else {
+    Object.assign(item, {
+      worldPosition: { x: newFrameX, y: newFrameY },
+      held: false
+    });
+  }; 
+
+  updateItemDrawPosition(item);
+  updateItemsArray(item);
+};
+
+const clearHoverStates = () => {
+  inGameItems.forEach(item => item.hover = false);
+};
+
+const updateItemHoverState = (offsetX, offsetY) => {
+  clearHoverStates(); // Clear all hover states first
+  let hoverDetected = false;
+
+  // Iterate from topmost to bottommost for accurate hover detection
+  for (let i = inGameItems.length - 1; i >= 0; i--) {
+    const item = inGameItems[i];
+
+    // Check if the item is in the equip area or within the player's range
+    const isHoverable = isInEquipArea(item) || isInRangeOfPlayer(item);
+    if (!isHoverable) continue;
+
+    // Check if the cursor is over the item
+    if (isCursorOverItem(item, offsetX, offsetY)) {
+      item.hover = true;
+      canvas.style.cursor = "grab";
+      hoverDetected = true;
+      break; // Stop at the first hovered item (topmost)
+    };
+  };
+
+  return hoverDetected;
 };
 
 const updateItemDrawPosition = (item) => {
@@ -291,60 +392,46 @@ const updateItemDrawPosition = (item) => {
   item.drawPosition.y = (item.worldPosition.y - playerLocation.y) * pixels + 320;
 };
 
-const moveToEquip = (item, slot) => {
-  if (!item || item.type !== slot) return; // Ensure valid item type
-  
-  const existingItem = player.data.details.equipped[slot];
+const resetItemPosition = (item, lastValidPosition) => {
+  if (!item || !lastValidPosition) return;
 
-  if (existingItem !== "empty") {
-    // Swap items
-    existingItem.worldPosition = item.lastValidPosition;
-    existingItem.category = "world";
-    updateItemDrawPosition(existingItem);
-  };
+  const { x, y } = lastValidPosition;
 
-  // Equip new item
-  player.data.details.equipped[slot] = item;
-  item.category = "equipped";
-  item.worldPosition = null;
-  item.drawPosition.x = equipSlots[slot].x;
-  item.drawPosition.y = equipSlots[slot].y;
+  item.drawPosition.x = x;
+  item.drawPosition.y = y;
+  item.held = false;
+  item.hover = false;
 
-  console.log(`Equipped ${item.name} in ${slot} slot.`);
-  drawAll();
+  const index = inGameItems.findIndex(curr => curr.id === item.id);
+
+  inGameItems.splice(index, 1);
+  inGameItems.push(item);
 };
 
-const moveToInventory = (item, slot) => {
-  if (!item || !slot) return;
+// Check valid areas
+const isMouseOnCanvas = (x, y) => (
+  Number.isFinite(x) && Number.isFinite(y) &&
+  x >= 0 && x < canvas.width &&
+  y >= 0 && y < canvas.height
+);
 
-  const existingItem = inventorySlots[slot];
-
-  if (existingItem) {
-    // Swap items
-    existingItem.worldPosition = item.lastValidPosition;
-    existingItem.category = "world";
-    updateItemDrawPosition(existingItem);
-  }
-
-  // Place item in inventory
-  inventorySlots[slot] = item;
-  item.category = "inventory";
-  item.worldPosition = null;
-  item.drawPosition.x = slot.x;
-  item.drawPosition.y = slot.y;
-
-  console.log(`Moved ${item.name} to inventory slot.`);
-  drawAll();
-};
-
-// check valid areas ------------------------------------------------------------
-const isMouseOnCanvas = (x, y) => {
+const isCursorOverItem = (item, offsetX, offsetY, size = 64) => {
   return (
-    typeof x === "number" &&
-    typeof y === "number" &&
-    x >= 0 && x < canvas.width &&
-    y >= 0 && y < canvas.height
+    offsetX >= item.drawPosition.x &&
+    offsetX <= item.drawPosition.x + size &&
+    offsetY >= item.drawPosition.y &&
+    offsetY <= item.drawPosition.y + size
   );
+};
+
+const isInRangeOfPlayer = (item) => {
+  const playerFrameX = player.data.details.location.x;
+  const playerFrameY = player.data.details.location.y;
+
+  const dx = item.worldPosition && Math.abs(item.worldPosition.x - playerFrameX);
+  const dy = item.worldPosition && Math.abs(item.worldPosition.y - playerFrameY);
+  
+  return dx <= 1 && dy <= 1; // Ensures the item is in the player's frame or an adjacent frame
 };
 
 const isInRenderArea = (item) => {
@@ -355,20 +442,25 @@ const isInRenderArea = (item) => {
     typeof item.worldPosition.y !== 'number'
   ) {
     return false;
-  }
+  };
 
   const { x, y } = item.worldPosition;
-  const renderStartX = 0;
-  const renderStartY = 0;
-  const renderEndX = 832; // 13 tiles * 64 pixels
-  const renderEndY = 704; // 11 tiles * 64 pixels
+  const playerX = player.data.details.location.x;
+  const playerY = player.data.details.location.y;
 
-  return x >= renderStartX && x < renderEndX && y >= renderStartY && y < renderEndY;
+  // Calculate the render area's boundaries
+  const startX = playerX - Math.floor(renderArea.size.col / 2);
+  const endX = playerX + Math.floor(renderArea.size.col / 2); 
+  const startY = playerY - Math.floor(renderArea.size.row / 2);
+  const endY = playerY + Math.floor(renderArea.size.row / 2);
+
+  // Check if the item is within the render area
+  return x >= startX && x <= endX && y >= startY && y <= endY;
 };
 
 const isInEquipArea = (item) => {
   const { x, y } = item.drawPosition;
-
+  
   return Object.values(equipSlots).some(slot =>
     x === slot.x && y === slot.y && uiState === 'inventory'
   );
@@ -382,94 +474,39 @@ const isInInventoryArea = (item) => {
     x === slot.x && y === slot.y && uiState === 'inventory'
   );
 };
- 
-const isItemInRangeOfPlayer = (item) => {
-  const playerFrameX = player.data.details.location.x;
-  const playerFrameY = player.data.details.location.y;
 
-  const dx = item.worldPosition && Math.abs(item.worldPosition.x - playerFrameX);
-  const dy = item.worldPosition && Math.abs(item.worldPosition.y - playerFrameY);
-  
-  return dx <= 1 && dy <= 1; // Ensures the item is in the player's frame or an adjacent frame
-};
+// Inventory
+const drawInventory = () => {
+  const arrows = inventorySlots.arrows;
+  const primary = inventorySlots.primary;
+  const secondary = inventorySlots.secondary;
+  const one = inventory.one;
+  const two = inventory.two;
 
-const updateItemsArray = (item) => {
-  const index = inGameItems.findIndex(curr => curr.id === item.id);
+  const drawSection = (item, section) => {
+    // draw header
+    ctx.drawImage(item.image, item.spritePosition.x, item.spritePosition.y, 32, 32, section.header.x + 64, section.header.y, 32, 32);
+  };
 
-  if(index > -1) {
-    inGameItems.splice(index, 1);
-    inGameItems.push(item);
+  if (uiState === 'inventory') {
+    ctx.clearRect(inventorySlots.x, 256, 192, 384);
+    ctx.fillStyle = "#40414F";
+    ctx.fillRect(inventorySlots.x, 256, 192, 384);
+
+    if (one.open && !two.open) {
+      drawSection(one.item, primary);
+    } else if (two.open) {
+      drawSection(one.item, primary);
+      drawSection(two.item, secondary);
+    };
   };
 };
 
-// Helper Function: Check if the cursor is over an item
-const isCursorOverItem = (item, offsetX, offsetY) => {
-  return (
-    offsetX >= item.drawPosition.x &&
-    offsetX <= item.drawPosition.x + 64 &&
-    offsetY >= item.drawPosition.y &&
-    offsetY <= item.drawPosition.y + 64
-  );
-};
+const handleInventoryArrows = () => {
 
-const isCursorOverSlot = (slot, offsetX, offsetY) => {
-  return (
-    offsetX >= slot.x &&
-    offsetX <= slot.x + 64 &&
-    offsetY >= slot.y &&
-    offsetY <= slot.y + 64
-  );
 }
 
-// Helper Function: Clear all hover states
-const clearHoverStates = () => {
-  inGameItems.forEach(item => item.hover = false);
-};
-
-// Helper Function: Update item hover state
-const updateItemHoverState = (offsetX, offsetY) => {
-  clearHoverStates(); // Ensure no lingering hover states
-  let hoverDetected = false;
-
-  // Check from topmost to bottommost for accurate selection
-  for (let i = inGameItems.length - 1; i >= 0; i--) {
-    const item = inGameItems[i];
-
-    // Skip if the item is out of range
-    if (!isItemInRangeOfPlayer(item)) continue;
-
-    // Check hover state
-    if (isCursorOverItem(item, offsetX, offsetY)) {
-      item.hover = true;
-      canvas.style.cursor = "grab";
-      hoverDetected = true;
-      break; // Stop after the first hovered item (topmost)
-    }
-  }
-
-  return hoverDetected;
-};
-
-// Helper Function: Reset item position beneath the player
-const resetItemPosition = (item) => {
-  if (!item) return;
-
-  item.drawPosition.x = lastValidPosition.x;
-  item.drawPosition.y = lastValidPosition.y;
-  item.held = false;
-  item.hover = false;
-
-  const index = inGameItems.findIndex(curr => curr.id === item.id);
-
-  inGameItems.splice(index, 1);
-  inGameItems.push(item);
-};
-
-// mouse behavior ---------------------------------------------------------------
-let heldItem = null;
-let lastValidPosition = null;
-
-// Mouse Move Event Handler
+// Mouse Event Handlers
 const handleMouseMove = (e) => {
   const { offsetX, offsetY } = e;
 
@@ -485,8 +522,6 @@ const handleMouseMove = (e) => {
 
   // If an item is held, update its position and cursor state
   if (heldItem) {
-    heldItem.drawPosition.x = offsetX - 32;
-    heldItem.drawPosition.y = offsetY - 32;
     canvas.style.cursor = "grabbing";
     return;
   }
@@ -495,7 +530,6 @@ const handleMouseMove = (e) => {
   if (updateItemHoverState(offsetX, offsetY)) return;
 };
 
-// Mouse Down Event Handler
 const handleMouseDown = (e) => {
   if (e.button !== 0) return; // Left click only
 
@@ -517,7 +551,6 @@ const handleMouseDown = (e) => {
   }
 };
 
-// Mouse Up Event Handler
 const handleMouseUp = (e) => {
   if (!heldItem) return;
 
@@ -526,7 +559,7 @@ const handleMouseUp = (e) => {
   const newFrameY = player.data.details.location.y + Math.floor((offsetY - 320) / 64);
 
   // Check valid drop locations
-  const inRenderArea = offsetX < 832 && offsetY < 704;
+  const inRenderArea = offsetX >= 0 && offsetX < 832 && offsetY >= 0 && offsetY < 704;
   const equipSlot = Object.keys(equipSlots).find(slot => {
     const { x, y } = equipSlots[slot];
     return offsetX >= x && offsetX < x + 64 && offsetY >= y && offsetY < y + 64 ? slot : null;
@@ -539,27 +572,57 @@ const handleMouseUp = (e) => {
   });
 
   // Handle item drop logic
-  if (equipSlot && uiState === 'inventory') {
-    moveToEquip(heldItem, equipSlot);
-  } else if (inventorySlot && uiState === 'inventory') {
-    moveToInventory(heldItem, inventorySlot);
-  } else if (inRenderArea) {
-    heldItem.worldPosition.x = newFrameX;
-    heldItem.worldPosition.y = newFrameY;
-    updateItemDrawPosition(heldItem);
-    updateItemsArray(heldItem);
+  if (uiState === 'inventory') {
+    if (equipSlot) moveToEquip(heldItem, equipSlot);
+    if (inventorySlot) moveToInventory(heldItem, inventorySlot);
+  };
+  
+  if (inRenderArea) {
+    moveToRenderArea(heldItem, newFrameX, newFrameY);
   } else {
-    resetItemPosition(heldItem);
-  }
+    resetItemPosition(heldItem, lastValidPosition);
+  };
 
   // Clear held state
-  heldItem.held = false;
   heldItem = null;
   canvas.style.cursor = "crosshair";
   drawAll();
 };
 
-// handle player movement -------------------------------------------------------
+const handleRightClick = (e) => {
+  e.preventDefault(); // Prevents the default right-click context menu
+
+  const { offsetX, offsetY } = e;
+  const item = inGameItems.find(item => isCursorOverItem(item, offsetX, offsetY));
+
+  if (!item || !item.contents) return; // Only proceed if the item has a 'content' property
+
+  if (!inventory.one.item) {
+    inventory.one.item = item;
+    inventory.one.open = true;
+  } else if (!inventory.two.item) {
+    inventory.two.item = item;
+    inventory.two.open = true;
+  } else if (inventory.one.item === item) {
+    inventory.one.item = null;
+    inventory.one.open = false;
+
+    if (inventory.two.item) {
+      inventory.one.item = inventory.two.item;
+      inventory.one.open = inventory.two.open;
+      inventory.two.item = null;
+      inventory.two.open = false;
+    }
+  } else if (inventory.two.item === item) {
+    inventory.two.item = null;
+    inventory.two.open = false;
+  };
+
+  console.log("Inventory state updated:", inventory);
+};
+
+
+// Player movement
 const canMove = (boundaryTiles, newX, newY) => {
   return !boundaryTiles.some(boundary => 
     newX === boundary.dx && newY === boundary.dy
@@ -681,7 +744,7 @@ const postGameData = async (url, data) => {
     }
   } catch (error) {
     console.error('Error saving game data:', error.message);
-  }
+  };
 };
 
 const updateAndPostGameData = async () => {
@@ -716,6 +779,10 @@ addEventListener("DOMContentLoaded", e => {
     handleMouseUp(e);
   });
 
+  canvas.addEventListener("contextmenu", e => {
+    handleRightClick(e);
+  });
+
   // window.addEventListener('resize', resizeCanvas);
 
   addEventListener('beforeunload', async (e) => {
@@ -739,17 +806,23 @@ function gameLoop() {
 };
 
 /*
+
+Next :: 
+add favicon
+when items are thrown onto certain tiles, it should delete the item, and can't throw on collision tiles
+equipped items should increase stats
+inventory behavior
+fix updating json
+depot interaction
+
+
+
+
 modularize code
-fix items stacking
-bug moving items outside renderArea
-need to ensure item only draws in the world when the mouse is in the world
+fix top layer. The layers aren't correct for every spot...
 fix save, player currently doesn't save accurately
 need to add player.json stats so that equipping items affects stats
-item behavior and collision tiles and deleting items that land in water
-draw inventory when backpack slot is not empty, should be able to open and close
-draw secondary inventory when clicking a second container
 maybe only show skill stat depending on the item(s) that is equipped
-code depot
 implement npcs, npc behavior, player ui
 chatbox to interact with npcs
 code money behavior
