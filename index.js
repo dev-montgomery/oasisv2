@@ -3,22 +3,23 @@ import { Player, Area, UiElements, Items, Creatures } from './src/utils/classes.
 import { characterSheet } from './src/components/stats.js';
 import { generateHexId } from './src/utils/utils.js';
 import { 
-  API_URL_PLAYER, 
   API_URL_ITEMS, 
+  API_URL_PLAYER, 
   canvas, 
-  ctx, 
-  renderArea, 
-  game, 
-  chat, 
-  tileSize, 
   centerX, 
   centerY, 
-  waterTileIDs, 
-  uppermostTileIDs,
-  equipSlots, 
+  chat, 
+  ctx, 
   equipSlotSize, 
+  equipSlots, 
+  game, 
+  inventory, 
+  inventorySlotSize, 
   inventorySlots, 
-  inventorySlotSize
+  renderArea, 
+  tileSize, 
+  uppermostTileIDs, 
+  waterTileIDs
 } from './src/components/const.js';
 
 // Initiations
@@ -39,11 +40,6 @@ let inGameItems = [];
 let heldItem = null;
 let lastValidPosition = null;
 
-const inventory = {
-  one: { item: null, open: false },
-  two: { item: null, open: false }
-};
-
 // Draw Functions
 const drawAll = () => {
   // Populate Character Sheet
@@ -54,7 +50,8 @@ const drawAll = () => {
 
   // Draw UI elements last so they appear on top
   drawUi();
-  // drawInventory();
+
+  
   // Draw all non-player items like objects or enemies
   inGameItems.forEach(item => {
     if (isInRenderArea(item) && item.category === 'world') {
@@ -64,11 +61,9 @@ const drawAll = () => {
     if (isInEquipArea(item) && item.category === 'equipped' && uiState === 'inventory') {
       drawItem(item);
     };
-
-    // if (isInInventoryArea(item) && item.category === 'inventory') {
-    //   drawItem(item); 
-    // };
   });
+
+  drawInventory();
   
   // Draw player before uppermost layer
   player.draw(ctx);
@@ -171,6 +166,7 @@ const drawUi = () => {
     // Populate content for map toggle if needed
   } else if (uiState === 'inventory') {
     drawTopSectionAndButton(top.equipArea, toggle.inventoryButton, toggle.inventoryButtonLocation);
+    drawInventory();
     // Populate content for inventory toggle if needed
   } else if (uiState === 'player') {
     drawTopSectionAndButton(top.playerDetails, toggle.playerButton, toggle.playerButtonLocation);
@@ -194,6 +190,7 @@ const drawUi = () => {
 };
 
 const drawItem = (item) => {
+  if (!item) return;
   if (item.worldPosition) updateItemDrawPosition(item);
 
   const { spritePosition, drawPosition } = item;
@@ -210,6 +207,70 @@ const drawItem = (item) => {
     size,
     size
   );
+};
+
+const drawInventory = () => {
+  const primary = inventorySlots.primary;
+  const secondary = inventorySlots.secondary;
+
+  // Clear and draw inventory background
+  ctx.clearRect(renderArea.width, 256, 192, 384);
+  ctx.drawImage(uiElements.image, 192, 0, 192, 384, renderArea.width, 256, 192, 384);
+
+  const drawInventorySection = (container, section, scroll, expanded) => {
+    if (!container) return; // Ensure there's a valid inventory object
+
+    const numOfRows = expanded && section === 1 ? 11 : 5;
+    const size = 32;
+    let position = scroll * 6;
+
+    const header = section === 1 ? primary.header : secondary.header;
+    const slots = section === 1 ? primary.slots : secondary.slots;
+
+    const drawInventorySlot = (x,y) => {
+      // Draw the white square
+      ctx.fillStyle = "white";
+      ctx.fillRect(x, y, size, size);
+  
+      // Draw the light gray border
+      ctx.strokeStyle = "lightgray";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+    };
+
+    // Draw inventory header
+    ctx.drawImage(items.image, container.spritePosition.x, container.spritePosition.y, 64, 64, header.x + 64 + 16, header.y, size, size);
+
+    // Draw inventory slots and contents
+    for (let row = 0; row < numOfRows * 6; row++) {
+      const x = slots.x + (row % 6) * size;
+      const y = slots.y + Math.floor(row / 6) * size;
+
+      
+      if (position < container.stats.slots) {
+        // ctx.drawImage(uiElements.image, 0, 576, 64, 64, x, y, size, size);
+        drawInventorySlot(x, y);
+        const item = container.contents[position];
+
+        if (typeof item === 'object') {
+          ctx.drawImage(items.image, item.spritePosition.x, item.spritePosition.y, 64, 64, x, y, size, size);
+        };
+      };
+
+      position++;
+    };
+  };
+
+  if (uiState === 'inventory') {
+    if (inventory.one.open && !inventory.two.open) {
+      drawInventorySection(inventory.one.item, 1, inventory.one.scroll, true);
+    };
+
+    if (inventory.two.open) {     
+      drawInventorySection(inventory.one.item, 1, inventory.one.scroll, false);
+      drawInventorySection(inventory.two.item, 2, inventory.two.scroll, false);
+    };
+  };
 };
 
 // Handle ui
@@ -294,66 +355,6 @@ const updateItemsArray = (item) => {
   };
 };
 
-const moveToEquip = (item, slot) => {
-  if (!item || item.type !== slot) return; // Ensure valid item type
-  
-  const existingItem = player.data.details.equipped[slot];
-
-  if (typeof(existingItem) === 'object') {
-    if (existingItem.id === item.id) return; 
-    
-    // Swap items
-    Object.assign(existingItem, {
-      category: 'world',
-      worldPosition: item.worldPosition,
-      held: false
-    });
-    
-    updateItemDrawPosition(existingItem);
-  };
-  
-  // Equip new item
-  Object.assign(item, {
-    category: 'equipped',
-    worldPosition: null,
-    drawPosition: { x: equipSlots[slot].x, y: equipSlots[slot].y },
-    held: false
-  });
-
-  console.log(`Equipped ${item.name} in ${slot} slot.`);
-  player.data.details.equipped[slot] = item;
-  updateItemsArray(item);
-  
-  drawAll();
-};
-
-const moveToInventory = (item, slot) => {
-  if (!item || !slot) return;
-  return;
-};
-
-const moveToRenderArea = (item, newFrameX, newFrameY) => {
-  const equippedItem = inGameItems.find(equipped => equipped.id === item.id);
-
-  if (equippedItem) {
-    Object.assign(item, {
-      category: 'world',
-      worldPosition: { x: newFrameX, y: newFrameY },
-      held: false
-    });
-
-    player.data.details.equipped[item.type] = 'empty';
-  } else {
-    Object.assign(item, {
-      worldPosition: { x: newFrameX, y: newFrameY },
-      held: false
-    });
-  }; 
-
-  updateItemDrawPosition(item);
-  updateItemsArray(item);
-};
-
 const clearHoverStates = () => {
   inGameItems.forEach(item => item.hover = false);
 };
@@ -406,6 +407,79 @@ const resetItemPosition = (item, lastValidPosition) => {
 
   inGameItems.splice(index, 1);
   inGameItems.push(item);
+};
+
+// Handling items between sections
+const moveToEquip = (item, slot) => {
+  if (!item || item.type !== slot) return; // Ensure valid item type
+  
+  const existingItem = player.data.details.equipped[slot];
+
+  if (typeof(existingItem) === 'object') {
+    if (existingItem.id === item.id) return; 
+    
+    // Swap items
+    Object.assign(existingItem, {
+      category: 'world',
+      worldPosition: item.worldPosition,
+      held: false
+    });
+    
+    updateItemDrawPosition(existingItem);
+  };
+  
+  // Equip new item
+  Object.assign(item, {
+    category: 'equipped',
+    worldPosition: null,
+    drawPosition: { x: equipSlots[slot].x, y: equipSlots[slot].y },
+    held: false
+  });
+
+  console.log(`Equipped ${item.name} in ${slot} slot.`);
+  player.data.details.equipped[slot] = item;
+  updateItemsArray(item);
+  
+  drawAll();
+};
+
+const moveToInventory = (item, container) => {
+  if (!item || !container) return;
+
+  if (container.contents.length <= container.stats.slots) {
+    Object.assign(item, {
+      category: 'inventory',
+      worldPosition: null,
+      held: false
+    });
+    
+    container.contents.push(item);
+  };
+
+  updateItemsArray(item);
+  drawAll();
+};
+
+const moveToRenderArea = (item, newFrameX, newFrameY) => {
+  const equippedItem = inGameItems.find(equipped => equipped.id === item.id);
+
+  if (equippedItem) {
+    Object.assign(item, {
+      category: 'world',
+      worldPosition: { x: newFrameX, y: newFrameY },
+      held: false
+    });
+
+    player.data.details.equipped[item.type] = 'empty';
+  } else {
+    Object.assign(item, {
+      worldPosition: { x: newFrameX, y: newFrameY },
+      held: false
+    });
+  }; 
+
+  updateItemDrawPosition(item);
+  updateItemsArray(item);
 };
 
 // Check valid areas
@@ -466,46 +540,6 @@ const isInEquipArea = (item) => {
   );
 };
 
-const isInInventoryArea = (item) => {
-  const { x, y } = item.drawPosition;
-
-  return Object.values(inventorySlots.primary).concat(Object.values(inventorySlots.secondary)).some(slot =>
-    slot.x !== undefined && slot.y !== undefined && // Ensure slots have coordinates
-    x === slot.x && y === slot.y && uiState === 'inventory'
-  );
-};
-
-// Inventory
-const drawInventory = () => {
-  const arrows = inventorySlots.arrows;
-  const primary = inventorySlots.primary;
-  const secondary = inventorySlots.secondary;
-  const one = inventory.one;
-  const two = inventory.two;
-
-  const drawSection = (item, section) => {
-    // draw header
-    ctx.drawImage(item.image, item.spritePosition.x, item.spritePosition.y, 32, 32, section.header.x + 64, section.header.y, 32, 32);
-  };
-
-  if (uiState === 'inventory') {
-    ctx.clearRect(inventorySlots.x, 256, 192, 384);
-    ctx.fillStyle = "#40414F";
-    ctx.fillRect(inventorySlots.x, 256, 192, 384);
-
-    if (one.open && !two.open) {
-      drawSection(one.item, primary);
-    } else if (two.open) {
-      drawSection(one.item, primary);
-      drawSection(two.item, secondary);
-    };
-  };
-};
-
-const handleInventoryArrows = () => {
-
-}
-
 // Mouse Event Handlers
 const handleMouseMove = (e) => {
   const { offsetX, offsetY } = e;
@@ -560,21 +594,37 @@ const handleMouseUp = (e) => {
 
   // Check valid drop locations
   const inRenderArea = offsetX >= 0 && offsetX < 832 && offsetY >= 0 && offsetY < 704;
-  const equipSlot = Object.keys(equipSlots).find(slot => {
+  const inEquipSlot = Object.keys(equipSlots).find(slot => {
     const { x, y } = equipSlots[slot];
     return offsetX >= x && offsetX < x + 64 && offsetY >= y && offsetY < y + 64 ? slot : null;
   });
-
-  const inventorySlot = Object.keys(inventorySlots.primary).find(slot => {
-    const { x, y } = inventorySlots.primary[slot] || {};
-    return x !== undefined && y !== undefined &&
-      offsetX >= x && offsetX < x + 64 && offsetY >= y && offsetY < y + 64;
-  });
+  const inFirstBag = 
+    offsetX >= inventorySlots.primary.slots.x && 
+    offsetX < inventorySlots.primary.slots.x + inventorySlots.primary.slots.width && 
+    offsetY >= inventorySlots.primary.slots.y && 
+    offsetY < inventorySlots.primary.slots.y + inventorySlots.primary.slots.height;
+  const inFirstBagExpanded = 
+    offsetX >= inventorySlots.primary.slots.x && 
+    offsetX < inventorySlots.primary.slots.x + inventorySlots.primary.slots.width && 
+    offsetY >= inventorySlots.primary.slots.y && 
+    offsetY < inventorySlots.primary.slots.y + inventorySlots.primary.slots.expandedHeight;
+  const inSecondBag = 
+    offsetX >= inventorySlots.secondary.slots.x && 
+    offsetX < inventorySlots.secondary.slots.x + inventorySlots.secondary.slots.width && 
+    offsetY >= inventorySlots.secondary.slots.y && 
+    offsetY < inventorySlots.secondary.slots.y + inventorySlots.secondary.slots.height;
 
   // Handle item drop logic
   if (uiState === 'inventory') {
-    if (equipSlot) moveToEquip(heldItem, equipSlot);
-    if (inventorySlot) moveToInventory(heldItem, inventorySlot);
+    if (inEquipSlot) moveToEquip(heldItem, inEquipSlot);
+    if (inFirstBagExpanded && inventory.one.open && !inventory.two.open || inFirstBag && inventory.one.open) {
+      moveToInventory(heldItem, inventory.one.item);
+      console.log('inFirstBag')
+    };
+    if (inSecondBag && inventory.two.open) {
+      moveToInventory(heldItem, inventory.two.item);
+      console.log('inSecondBag')
+    };
   };
   
   if (inRenderArea) {
@@ -596,31 +646,39 @@ const handleRightClick = (e) => {
   const item = inGameItems.find(item => isCursorOverItem(item, offsetX, offsetY));
 
   if (!item || !item.contents) return; // Only proceed if the item has a 'content' property
-
-  if (!inventory.one.item) {
-    inventory.one.item = item;
-    inventory.one.open = true;
-  } else if (!inventory.two.item) {
-    inventory.two.item = item;
-    inventory.two.open = true;
-  } else if (inventory.one.item === item) {
-    inventory.one.item = null;
-    inventory.one.open = false;
-
-    if (inventory.two.item) {
-      inventory.one.item = inventory.two.item;
-      inventory.one.open = inventory.two.open;
-      inventory.two.item = null;
-      inventory.two.open = false;
-    }
-  } else if (inventory.two.item === item) {
-    inventory.two.item = null;
-    inventory.two.open = false;
+  
+  if (uiState === 'inventory') {
+    if(isInRangeOfPlayer(item) || player.data.details.equipped.back === item) {
+      if (!inventory.one.item) {
+        inventory.one.item = item;
+        inventory.one.open = true;
+        inventory.expanded = true;
+      } else if (item !== inventory.one.item && !inventory.two.item) {
+        inventory.two.item = item;
+        inventory.two.open = true;
+        inventory.expanded = false;
+      } else if (inventory.one.item === item) {
+        inventory.one.item = null;
+        inventory.one.open = false;
+        inventory.expanded = false;
+    
+        if (inventory.two.item) {
+          inventory.one.item = inventory.two.item;
+          inventory.one.open = inventory.two.open;
+          inventory.two.item = null;
+          inventory.two.open = false;
+          inventory.expanded = true;
+        }
+      } else if (inventory.two.item === item) {
+        inventory.two.item = null;
+        inventory.two.open = false;
+        inventory.expanded = true;
+      };
+      console.log("Inventory state updated:", inventory);
+      drawInventory();
+    };
   };
-
-  console.log("Inventory state updated:", inventory);
 };
-
 
 // Player movement
 const canMove = (boundaryTiles, newX, newY) => {
@@ -814,9 +872,6 @@ equipped items should increase stats
 inventory behavior
 fix updating json
 depot interaction
-
-
-
 
 modularize code
 fix top layer. The layers aren't correct for every spot...
