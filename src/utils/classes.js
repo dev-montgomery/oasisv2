@@ -108,10 +108,6 @@ export class UiElements {
       strength: {},
       xmark: {}
     };
-    this.state = {
-      activeToggle: 'inventory',
-      activeStance: 'passive'
-    };
   };
 
   loadImage() {

@@ -125,7 +125,7 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
 };
 
 const drawUi = () => {
-  const { image, pixels, top, inventory, toggle, stance, state } = uiElements;
+  const { image, pixels, top, inventory, toggle, stance } = uiElements;
   const uiXOffset = renderArea.width + 4; // Add 4-pixel gap from the renderArea width
   
   // Clear UI section
@@ -151,7 +151,15 @@ const drawUi = () => {
 
   // Draw static UI sections
   drawSection(toggle.sprite, toggle.location); // Map, Inventory, Player toggle bar
-  drawSection(inventory.sprite, inventory.location, inventory.location.width, inventory.location.height); // Content area background
+  
+  const sectionCount = uiState === 'player' ? 6 : 7; // Player UI has 6 sections, others have 7
+  ctx.clearRect(renderArea.width, 256, 192, sectionCount * 64);
+
+  for (let i = 0; i < sectionCount; i++) {
+    const spriteY = i === 0 ? 0 : i === sectionCount - 1 ? 128 : 64;
+    ctx.drawImage(uiElements.image, 192, spriteY, 192, 64, renderArea.width, 256 + i * 64, 192, 64);
+  };
+  
   if (uiState === 'player') drawSection(stance.sprite, stance.location); // Offense, Defense, Passive buttons
 
   // Draw current toggle section
@@ -166,7 +174,6 @@ const drawUi = () => {
   } else if (uiState === 'inventory') {
     drawTopSectionAndButton(top.equipArea, toggle.inventoryButton, toggle.inventoryButtonLocation);
     drawInventory();
-    // Populate content for inventory toggle if needed
   } else if (uiState === 'player') {
     drawTopSectionAndButton(top.playerDetails, toggle.playerButton, toggle.playerButtonLocation);
     // Populate content for player toggle if needed
@@ -214,11 +221,13 @@ const drawInventory = () => {
   const primary = inventorySlots.primary;
   const secondary = inventorySlots.secondary;
 
-  // Clear and draw inventory background
-  // if (uiState === 'map' || uiState === 'player') {
-    ctx.clearRect(renderArea.width, 256, 192, 384);
-    ctx.drawImage(uiElements.image, 192, 0, 192, 384, renderArea.width, 256, 192, 384);
-  // };
+  const sectionCount = uiState === 'player' ? 6 : 7; // Player UI has 6 sections, others have 7
+  ctx.clearRect(renderArea.width, 256, 192, sectionCount * 64);
+
+  for (let i = 0; i < sectionCount; i++) {
+    const spriteY = i === 0 ? 0 : i === sectionCount - 1 ? 128 : 64;
+    ctx.drawImage(uiElements.image, 192, spriteY, 192, 64, renderArea.width, 256 + i * 64, 192, 64);
+  };
 
   if (uiState === 'inventory' && inventory.one.open) {
     ctx.clearRect(renderArea.width, 256, 192, 448);
@@ -238,6 +247,12 @@ const drawInventory = () => {
     const slots = section === 1 ? primary.slots : secondary.slots;
 
     const drawInventorySlot = (x,y) => {
+      // if (uiState === 'inventory' && inventory.one.open) {
+        // ctx.clearRect(renderArea.width, 256, 192, 448);
+        // ctx.fillStyle = "white";
+        // ctx.fillRect(renderArea.width, 256, 192, 448);
+      // };
+
       ctx.fillStyle = "lightgray";
       ctx.fillRect(x, y, size, size);
   
@@ -466,7 +481,16 @@ const moveToInventory = (item, container) => {
   if (container.contents.length >= container.stats.slots) return;
 
   // Prevent adding duplicate items
-  if (container.contents.includes(item)) return;
+  if (container.contents.includes(item)) {
+    const index = container.contents.findIndex(curr => curr.id === item.id);
+
+    if(index > -1) {
+      container.contents.splice(index, 1);
+      container.contents.push(item);
+    };
+    
+    return;
+  };
 
   // Remove item from equipped section if applicable
   if (player.data.details.equipped[item.type] === item) {

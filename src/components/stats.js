@@ -2,8 +2,8 @@ export const characterSheet = (player) => {
   const container = document.querySelector(".player-details-container");
   if (!container) return;
 
-  const currOffense = player.details.equipped.mainhand;
-  const currDefense = player.details.equipped.offhand;
+  const currOffense = player.details.equipped.mainhand || null;
+  const currDefense = player.details.equipped.offhand || null;
   
   container.innerHTML = `
     <div class="player-details-container-border noselect">
