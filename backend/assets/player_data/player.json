@@ -22,9 +22,9 @@
           "distancexp": 0, "shieldxp": 0, "fishingxp": 0
         },
         "equipped": {
-          "neck": "empty", "head": "empty", "back": "empty",
-          "mainhand": "empty", "chest": "empty", "offhand": "empty",
-          "hands": "empty", "legs": "empty", "feet": "empty"
+          "neck": null, "head": null, "back": null,
+          "mainhand": null, "chest": null, "offhand": null,
+          "hands": null, "legs": null, "feet": null
         },
         "inventory": [],
         "depot": [],
@@ -53,9 +53,9 @@
           "distancexp": 0, "shieldxp": 0, "fishingxp": 0
         },
         "equipped": {
-          "neck": "empty", "head": "empty", "back": "empty",
-          "mainhand": "empty", "chest": "empty", "offhand": "empty",
-          "hands": "empty", "legs": "empty", "feet": "empty"
+          "neck": null, "head": null, "back": null,
+          "mainhand": null, "chest": null, "offhand": null,
+          "hands": null, "legs": null, "feet": null
         },
         "inventory": [],
         "depot": [],
@@ -96,15 +96,15 @@
       "fishingxp": 0
     },
     "equipped": {
-      "neck": "empty", 
-      "head": "empty", 
-      "back": "empty",
-      "mainhand": "empty", 
-      "chest": "empty", 
-      "offhand": "empty",
-      "hands": "empty", 
-      "legs": "empty", 
-      "feet": "empty"
+      "neck": null, 
+      "head": null, 
+      "back": null,
+      "mainhand": null, 
+      "chest": null, 
+      "offhand": null,
+      "hands": null, 
+      "legs": null, 
+      "feet": null
     },
     "inventory": [],
     "depot": [],

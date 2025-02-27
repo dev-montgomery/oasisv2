@@ -19,13 +19,13 @@ export const characterSheet = (player) => {
       <p><strong>Fishing:</strong> ${player.details.skills.fishing}</p>
       <p>
         <strong>
-          ${typeof currOffense === 'object' ? currOffense.name.charAt(0).toUpperCase() + currOffense.name.slice(1) + ':' : ''} 
-        </strong> ${typeof currOffense === 'object' ? player.details.skills[currOffense.name] : ''}
+          ${currOffense ? currOffense.name.charAt(0).toUpperCase() + currOffense.name.slice(1) + ':' : ''} 
+        </strong> ${currOffense ? player.details.skills[currOffense.name] : ''}
       </p>
       <p>
         <strong>
-          ${typeof currDefense === 'object' ? 'Defense:' : ''} 
-        </strong> ${typeof currDefense === 'object' ? player.details.skills.shield : ''}
+          ${currDefense ? 'Defense:' : ''} 
+        </strong> ${currDefense ? player.details.skills.shield : ''}
       </p>
     </div>
   `;
