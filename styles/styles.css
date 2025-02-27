@@ -67,7 +67,7 @@ p, h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   align-items: center;
   color: #fff;
-  padding: 0 20px 20px 20px;
+  padding: 0 25px 25px 25px;
 }
 
 #login-form legend {
@@ -106,20 +106,26 @@ p, h1, h2, h3, h4, h5, h6 {
   flex-direction: row;
   justify-content: center;
   align-items: center;
+  padding: 6px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: hsl(60, 25%, 30%) hsl(60, 25%, 20%) hsl(60, 25%, 20%) hsl(60, 25%, 30%);
+  /* border-color: hsl(60, 25%, 35%) hsl(60, 25%, 20%) hsl(60, 25%, 20%) hsl(60, 25%, 35%);   */
+  /* border-color: hsl(60, 25%, 20%); */
 }
 
 /* Lefthand-side */
 .player-details-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* justify-content: center; */
   height: 704px;
-  width: 250px;   
+  width: 200px;   
   background: #2e2e2e;
   color: #ccc;
   line-height: 2;
   font-size: 1.2rem;
-  padding: 0 2rem; /* Adds padding to the left and right */
+  padding: 0.6rem;
 }
 
 /* Utility Classes */

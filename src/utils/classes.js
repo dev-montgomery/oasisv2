@@ -167,13 +167,12 @@ export class Creatures {
 // };
 
 export class Item {
-  constructor( id, name, type, spritePosition, worldPosition, drawPosition ) {
-    this.id = id;
+  constructor( name, id, worldPosition, drawPosition ) {
     this.name = name;
-    this.type = type;
-    this.spritePosition = spritePosition;
+    this.id = id;
     this.worldPosition = worldPosition;
-    this.drawPosition = drawPosition || null;
-    this.location = 'world';
+    this.drawPosition = drawPosition || { x: null, y: null };
+    this.hover = false;
+    this.held = false;
   };
 };

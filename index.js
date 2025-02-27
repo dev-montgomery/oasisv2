@@ -1,49 +1,46 @@
 import { resources } from './src/utils/resources.js';
-import { Player, Area, UiElements, Items, Item, Creatures } from './src/utils/classes.js';
+import { Player, Area, UiElements, Items, Creatures } from './src/utils/classes.js';
+import { characterSheet } from './src/components/stats.js';
+import { generateHexId } from './src/utils/utils.js';
+import { 
+  API_URL_ITEMS, 
+  API_URL_PLAYER, 
+  canvas, 
+  centerX, 
+  centerY, 
+  chat, 
+  ctx, 
+  equipSlotSize, 
+  equipSlots, 
+  game, 
+  inventory, 
+  inventorySlotSize, 
+  inventorySlots, 
+  renderArea, 
+  tileSize, 
+  uppermostTileIDs, 
+  waterTileIDs
+} from './src/components/const.js';
 
-const API_URL = 'http://localhost:3000/playerdata';
-
-// canvas and context and screen sizes ------------------------------------------
-const canvas = document.querySelector('canvas');
-const ctx = canvas.getContext('2d');
-
-canvas.width = 1024;
-canvas.height = 704;
-const uiWidth = 192;
-
-const screen = {
-  frames: { row: 11, col: 13 }, 
-  width: canvas.width - uiWidth, 
-  height: canvas.height 
-};
-
-const game = document.querySelector('.game-container');
-game.on = false;
-
-const chat = { open: false };
-
-// init sprite assets ------------------------------------------------------------------
+// Initiations
 const player = new Player();
 const area = new Area();
 const uiElements = new UiElements();
 const items = new Items();
 const creatures = new Creatures();
-// const animations = new Animations();
 
-// map variables
+let lastMouseX = 0;
+let lastMouseY = 0;
 let boundaryTiles = [];
 let waterTiles = [];
 let uppermostTiles = [];
-
-// ui variables
 let uiState = 'player';
 let uiStance = 'passive';
-
-// item variables
 let inGameItems = [];
-inGameItems.push(new Item(0, 'sword', 'mainhand', { x: 64, y: 320 }, { x: 155, y: 187 })); // for testing
+let heldItem = null;
+let lastValidPosition = null;
 
-// contains all draw functions --------------------------------------------------
+// Draw Functions
 const drawAll = () => {
   // Populate Character Sheet
   characterSheet(player.data);
@@ -51,51 +48,28 @@ const drawAll = () => {
   // Draw the map (background) and Player
   drawArea();
 
+  // Draw UI elements last so they appear on top
+  drawUi();
+
   // Draw all non-player items like objects or enemies
   inGameItems.forEach(item => {
-    if (isItemVisible(item)) {
+    if (isInRenderArea(item) && item.category === 'world') {
+      drawItem(item);
+    };
+    
+    if (isInEquipArea(item) && item.category === 'equipped' && uiState === 'inventory') {
+      drawItem(item);
+    };
+  });
 
-    }
-  })
-
+  drawInventory();
+  
   // Draw player before uppermost layer
   player.draw(ctx);
 
   // Draw upper tiles after all others
   uppermostTiles.forEach(tileData => drawTile(area.image, tileData));
-
-  // Draw UI elements last so they appear on top
-  drawUi();
 };
-
-// character sheet section ------------------------------------------------------
-const characterSheet = (player) => {
-  const container = document.querySelector(".player-details-container");
-  if (!container) return;
-
-  container.innerHTML = `
-    <h2>${player.name}</h2>
-    <p><strong>level:</strong> ${player.details.lvls.lvl}</p>
-    <p><strong>m.level:</strong> ${player.details.lvls.mglvl}</p>
-    <br>
-    <p><strong>health:</strong> ${player.details.stats.health}</p>
-    <p><strong>magic:</strong> ${player.details.stats.magic}</p>
-    <p><strong>capacity:</strong> ${player.details.stats.capacity}</p>
-    <p><strong>speed:</strong> ${player.details.stats.speed}</p>
-    <br>
-    <p><strong>fist:</strong> ${player.details.skills.fist}</p>
-    <p><strong>sword:</strong> ${player.details.skills.sword}</p>
-    <p><strong>axe:</strong> ${player.details.skills.axe}</p>
-    <p><strong>blunt:</strong> ${player.details.skills.blunt}</p>
-    <p><strong>distance:</strong> ${player.details.skills.distance}</p>
-    <p><strong>shield:</strong> ${player.details.skills.shield}</p>
-    <p><strong>fishing:</strong> ${player.details.skills.fishing}</p>
-  `;
-};
-
-// draw map ---------------------------------------------------------------------
-const waterTileIDs = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-const uppermostTileIDs = [30, 31, 300, 301, 320, 321, 322, 323, 324, 340, 343, 360, 362, 363, 380, 383];
 
 const drawTile = (image, { sx, sy, dx, dy }) => {
   const tileSize = 64; // Fixed size for tiles
@@ -109,16 +83,16 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
 
   // Calculate starting tile based on the player position
   const startingTile = {
-    x: player.data.details.location.x - Math.floor(screen.frames.col / 2),
-    y: player.data.details.location.y - Math.floor(screen.frames.row / 2),
+    x: player.data.details.location.x - Math.floor(renderArea.size.col / 2),
+    y: player.data.details.location.y - Math.floor(renderArea.size.row / 2),
   };
 
   // Generate the visible map
   const visibleMap = currentMap.map(layer => {
     let tiles = [];
     let currentNum = area.mapDimensions.col * (startingTile.y - 1) + startingTile.x;
-    for (let i = 0; i < screen.frames.row; i++) {
-      tiles.push(...layer.data.slice(currentNum, currentNum + screen.frames.col));
+    for (let i = 0; i < renderArea.size.row; i++) {
+      tiles.push(...layer.data.slice(currentNum, currentNum + renderArea.size.col));
       currentNum += area.mapDimensions.col;
     };
     return tiles;
@@ -131,8 +105,8 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
       if (tileID > 0) {
         const sx = Math.floor((tileID - 1) % 20) * area.pixels; // Source x on spritesheet
         const sy = Math.floor((tileID - 1) / 20) * area.pixels; // Source y on spritesheet
-        const dx = Math.floor(i % screen.frames.col) * area.pixels; // Destination x on canvas
-        const dy = Math.floor(i / screen.frames.col) * area.pixels; // Destination y on canvas
+        const dx = Math.floor(i % renderArea.size.col) * area.pixels; // Destination x on canvas
+        const dy = Math.floor(i / renderArea.size.col) * area.pixels; // Destination y on canvas
         const tileData = { sx, sy, dx, dy };
   
         if (tileID === 10 || tileID === 11) {
@@ -150,13 +124,12 @@ const drawArea = (currentMap = resources.mapData.isLoaded && resources.mapData.g
   });
 };
 
-// draw ui elements -------------------------------------------------------------
 const drawUi = () => {
   const { image, pixels, top, inventory, toggle, stance, state } = uiElements;
-  const uiXOffset = screen.width + 4; // Add 4-pixel gap from the screen width
+  const uiXOffset = renderArea.width + 4; // Add 4-pixel gap from the renderArea width
   
   // Clear UI section
-  ctx.clearRect(uiXOffset, 0, uiWidth, screen.height);
+  ctx.clearRect(uiXOffset, 0, canvas.uiWidth, renderArea.height);
 
   // Draw a generic section
   const drawSection = (sprite, location, width, height) => {
@@ -179,7 +152,7 @@ const drawUi = () => {
   // Draw static UI sections
   drawSection(toggle.sprite, toggle.location); // Map, Inventory, Player toggle bar
   drawSection(inventory.sprite, inventory.location, inventory.location.width, inventory.location.height); // Content area background
-  drawSection(stance.sprite, stance.location); // Offense, Defense, Passive buttons
+  if (uiState === 'player') drawSection(stance.sprite, stance.location); // Offense, Defense, Passive buttons
 
   // Draw current toggle section
   const drawTopSectionAndButton = (section, button, buttonLocation) => {
@@ -192,6 +165,7 @@ const drawUi = () => {
     // Populate content for map toggle if needed
   } else if (uiState === 'inventory') {
     drawTopSectionAndButton(top.equipArea, toggle.inventoryButton, toggle.inventoryButtonLocation);
+    drawInventory();
     // Populate content for inventory toggle if needed
   } else if (uiState === 'player') {
     drawTopSectionAndButton(top.playerDetails, toggle.playerButton, toggle.playerButtonLocation);
@@ -203,69 +177,30 @@ const drawUi = () => {
     drawSection(stanceType, location, pixels, pixels);
   };
 
-  if (uiStance === 'offense') {
-    drawStance(stance.offense, stance.offenseLocation);
-  } else if (uiStance === 'defense') {
-    drawStance(stance.defense, stance.defenseLocation);
-  } else if (uiStance === 'passive') {
-    drawStance(stance.passive, stance.passiveLocation);
-  };
-};
-
-// handle ui state
-const handleUiStates = e => {
-  const { toggle, stance } = uiElements; // Access UI element locations
-  const { offsetX, offsetY, type } = e;
-
-  // Helper function to check if the mouse is over a button
-  const isMouseOverButton = ({ x, y }, width = 64, height = 64) => {
-    return offsetX >= x && offsetX <= x + width && offsetY >= y && offsetY <= y + height;
-  };
-
-  // Generic handler for hover and click events
-  const handleInteraction = (buttons, stateUpdater) => {
-    for (const [key, button] of Object.entries(buttons)) {
-      if (isMouseOverButton(button)) {
-        if (type === "mousedown") {
-          stateUpdater(key); // Update state variable dynamically
-          drawUi();
-        };
-        return true; // Hovering detected
-      };
+  if (uiState === 'player') {
+    if (uiStance === 'offense') {
+      drawStance(stance.offense, stance.offenseLocation);
+    } else if (uiStance === 'defense') {
+      drawStance(stance.defense, stance.defenseLocation);
+    } else if (uiStance === 'passive') {
+      drawStance(stance.passive, stance.passiveLocation);
     };
-    return false; // No interaction
   };
 
-  // Process toggle and stance buttons
-  const toggleButtons = {
-    map: toggle.mapButtonLocation,
-    inventory: toggle.inventoryButtonLocation,
-    player: toggle.playerButtonLocation,
-  };
-
-  const stanceButtons = {
-    offense: stance.offenseLocation,
-    defense: stance.defenseLocation,
-    passive: stance.passiveLocation,
-  };
-
-  // Detect hover and update UI state if needed
-  const hoveringToggle = handleInteraction(toggleButtons, (key) => (uiState = key));
-  const hoveringStance = handleInteraction(stanceButtons, (key) => (uiStance = key));
-
-  // Update cursor style based on hover state
-  document.body.style.cursor = hoveringToggle || hoveringStance ? "pointer" : "default";
+  uiState === "inventory" && inGameItems.forEach(item => item.category === "equipped" && drawItem(item));
 };
 
-// handle equip, inventory, and depot -------------------------------------------
 const drawItem = (item) => {
-  const { spriteLocation, drawPosition } = item;
+  if (!item) return;
+  if (item.worldPosition) updateItemDrawPosition(item);
+
+  const { spritePosition, drawPosition } = item;
   const size = 64;
 
   ctx.drawImage(
     items.image,
-    spriteLocation.x,
-    spriteLocation.y,
+    spritePosition.x,
+    spritePosition.y,
     size,
     size,
     drawPosition.x,
@@ -275,99 +210,581 @@ const drawItem = (item) => {
   );
 };
 
-const isItemVisible = (item) => {
-  const visibleStartX = player.data.details.location.x - Math.floor(screen.frames.col / 2);
-  const visibleEndX = visibleStartX + screen.frames.col - 1;
-  const visibleStartY = player.data.details.location.y - Math.floor(screen.frames.row / 2);
-  const visibleEndY = visibleStartY + screen.frames.row - 1;
+const drawInventory = () => {
+  const primary = inventorySlots.primary;
+  const secondary = inventorySlots.secondary;
 
+  // Clear and draw inventory background
+  // if (uiState === 'map' || uiState === 'player') {
+    ctx.clearRect(renderArea.width, 256, 192, 384);
+    ctx.drawImage(uiElements.image, 192, 0, 192, 384, renderArea.width, 256, 192, 384);
+  // };
+
+  if (uiState === 'inventory' && inventory.one.open) {
+    ctx.clearRect(renderArea.width, 256, 192, 448);
+    ctx.fillStyle = "white";
+    ctx.fillRect(renderArea.width, 256, 192, 448);
+  };
+
+  const drawInventorySection = (container, section, scroll, expanded) => {
+    if (!container) return;
+
+    const numOfRows = expanded && section === 1 ? 11 : 5;
+    const rowLength = 4;
+    const size = 48;
+    let position = scroll * rowLength;
+
+    const header = section === 1 ? primary.header : secondary.header;
+    const slots = section === 1 ? primary.slots : secondary.slots;
+
+    const drawInventorySlot = (x,y) => {
+      ctx.fillStyle = "lightgray";
+      ctx.fillRect(x, y, size, size);
+  
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+    };
+
+    // Draw inventory header
+    ctx.drawImage(items.image, container.spritePosition.x, container.spritePosition.y, 64, 64, header.x + 64 + 16, header.y, 32, 32);
+
+    // Draw inventory slots and contents
+    for (let row = 0; row < numOfRows * rowLength; row++) {
+      const x = slots.x + (row % rowLength) * size;
+      const y = slots.y + Math.floor(row / rowLength) * size;
+
+      if (position < container.stats.slots) {
+        drawInventorySlot(x, y);
+        const item = container.contents[position];
+
+        if (typeof item === 'object') {
+          item.drawPosition = { x: x, y: y };
+          updateItemsArray(item);
+          ctx.drawImage(items.image, item.spritePosition.x, item.spritePosition.y, 64, 64, x, y, size, size);
+        };
+      };
+
+      position++;
+    };
+  };
+
+  if (uiState === 'inventory') {
+    if (inventory.one.open && !inventory.two.open) {
+      drawInventorySection(inventory.one.item, 1, inventory.one.scroll, true);
+    } else if (inventory.two.open) {     
+      drawInventorySection(inventory.one.item, 1, inventory.one.scroll, false);
+      drawInventorySection(inventory.two.item, 2, inventory.two.scroll, false);
+    };
+  };
+};
+
+// Handle ui
+const handleUiStates = (e) => {
+  const { toggle, stance } = uiElements;
+  const { offsetX, offsetY, type } = e;
+
+  const isMouseOverButton = ({ x, y }, width = 64, height = 64) => {
+    return offsetX >= x && offsetX <= x + width && offsetY >= y && offsetY <= y + height;
+  };
+
+  const handleInteraction = (buttons, stateUpdater) => {
+    for (const [key, button] of Object.entries(buttons)) {
+      if (isMouseOverButton(button)) {
+        if (type === "mousedown") {
+          stateUpdater(key);
+          drawUi();
+        };
+        return "pointer"; // Return pointer if over a UI element
+      };
+    };
+    return null; // Return null if no UI interaction
+  };
+
+  const toggleButtons = {
+    map: toggle.mapButtonLocation,
+    inventory: toggle.inventoryButtonLocation,
+    player: toggle.playerButtonLocation,
+  };
+
+  if (uiState === "player") {
+    const stanceButtons = {
+      offense: stance.offenseLocation,
+      defense: stance.defenseLocation,
+      passive: stance.passiveLocation,
+    };
+    return (
+      handleInteraction(toggleButtons, (key) => (uiState = key)) ||
+      handleInteraction(stanceButtons, (key) => (uiStance = key))
+    );
+  }
+  
+  return handleInteraction(toggleButtons, (key) => (uiState = key));
+};
+
+// Handle item behavior
+const createNewItem = (name, location, coordinates = null) => {
+  const baseItem = resources.itemData.items.find(it => it.name === name);
+  if (!baseItem) {
+    console.error(`Item "${name}" not found in itemData.`);
+    return null;
+  };
+
+  // Create a deep copy of the item to prevent modifying the original
+  const newItem = {
+    ...baseItem,
+    id: generateHexId(),
+    category: location, // world, inventory, npc-corpse, etc.
+    worldPosition: location === "world" ? coordinates : null, // Only for world items
+    // drawPosition: destination, // renderArea draw position (if needed)
+  };
+
+  inGameItems.push(newItem);
+  return newItem;
+};
+
+const populateInGameItems = () => {
+  if (!Array.isArray(resources.itemData.itemsInGame)) {
+    console.error("Error: itemsInGame is not an array.");
+    return;
+  };
+
+  inGameItems = resources.itemData.itemsInGame.map(item => ({
+    ...item, // Copy existing item properties
+    id: generateHexId(), // Ensure each item has a unique ID
+  }));
+};
+
+const updateItemsArray = (item) => {
+  const index = inGameItems.findIndex(curr => curr.id === item.id);
+
+  if(index > -1) {
+    inGameItems.splice(index, 1);
+    inGameItems.push(item);
+  };
+};
+
+const clearHoverStates = () => {
+  inGameItems.forEach(item => item.hover = false);
+};
+
+const updateItemHoverState = (offsetX, offsetY) => {
+  clearHoverStates(); // Clear all hover states first
+  let hoverDetected = false;
+
+  // Iterate from topmost to bottommost for accurate hover detection
+  for (let i = inGameItems.length - 1; i >= 0; i--) {
+    const item = inGameItems[i];
+
+    // Check if the item is in the equip area or within the player's range
+    const isHoverable = isInEquipArea(item) || isInInventoryArea(item) || isInRangeOfPlayer(item);
+    if (!isHoverable) continue;
+
+    // Check if the cursor is over the item
+    if (isCursorOverItem(item, offsetX, offsetY)) {
+      item.hover = true;
+      canvas.style.cursor = "grab";
+      hoverDetected = true;
+      break; // Stop at the first hovered item (topmost)
+    };
+  };
+
+  return hoverDetected;
+};
+
+const updateItemDrawPosition = (item) => {
+  if (!item || item.worldPosition === null) return;
+
+  const playerLocation = player.data.details.location;
+  const pixels = 64;
+
+  item.drawPosition.x = (item.worldPosition.x - playerLocation.x) * pixels + 384;
+  item.drawPosition.y = (item.worldPosition.y - playerLocation.y) * pixels + 320;
+};
+
+const resetItemPosition = (item, lastValidPosition) => {
+  if (!item || !lastValidPosition) return;
+
+  const { x, y } = lastValidPosition;
+
+  item.drawPosition.x = x;
+  item.drawPosition.y = y;
+  item.held = false;
+  item.hover = false;
+
+  const index = inGameItems.findIndex(curr => curr.id === item.id);
+
+  inGameItems.splice(index, 1);
+  inGameItems.push(item);
+};
+
+// Handle item behavior between sections
+const moveToEquip = (item, slot) => {
+  if (!item || item.type !== slot) return; // Ensure valid item type
+  
+  const existingItem = player.data.details.equipped[slot];
+
+  if (existingItem) {
+    if (existingItem.id === item.id) return; 
+    
+    // Swap items
+    Object.assign(existingItem, {
+      category: 'world',
+      worldPosition: item.worldPosition,
+      held: false
+    });
+    
+    updateItemDrawPosition(existingItem);
+    updateItemsArray(existingItem);
+  };
+
+  if (item.category === 'inventory') {
+    const container = findItemContainer(item, inGameItems);
+    const index = container.contents.findIndex(curr => curr.id === item.id);
+    if (index > -1) container.contents.splice(index, 1);
+    console.log(`removed ${item.name} from inventory to equip section.`)
+  };
+  
+  // Equip new item
+  Object.assign(item, {
+    category: 'equipped',
+    worldPosition: null,
+    drawPosition: { x: equipSlots[slot].x, y: equipSlots[slot].y },
+    held: false
+  });
+
+  console.log(`Equipped ${item.name} in ${slot} slot.`);
+  player.data.details.equipped[slot] = item;
+  updateItemsArray(item);
+  drawAll();
+};
+
+const moveToInventory = (item, container) => {
+  if (!item || !container) return;
+
+  // Ensure inventory has space before checking for duplicates
+  if (container.contents.length >= container.stats.slots) return;
+
+  // Prevent adding duplicate items
+  if (container.contents.includes(item)) return;
+
+  // Remove item from equipped section if applicable
+  if (player.data.details.equipped[item.type] === item) {
+    player.data.details.equipped[item.type] = 'empty'; // Proper assignment
+    console.log(`Removed ${item.name} from equip section to inventory.`);
+  }
+
+  // Update item properties
+  Object.assign(item, {
+    category: 'inventory',
+    worldPosition: null,
+    held: false,
+    hover: false
+  });
+
+  // Add item to inventory container
+  container.contents.push(item);
+
+  drawAll();
+};
+
+const moveToRenderArea = (item, newFrameX, newFrameY) => {
+  if (!item) return; // Ensure item exists before proceeding
+
+  if (item.category === 'equipped') {
+    player.data.details.equipped[item.type] = null; // Use null for consistency
+  } else if (item.category === 'inventory') {
+    const container = findItemContainer(item, inGameItems);
+    if (container && container.contents) { // Ensure container exists
+      const index = container.contents.findIndex(curr => curr.id === item.id);
+      if (index > -1) container.contents.splice(index, 1);
+    }
+  }
+
+  Object.assign(item, {
+    category: 'world',
+    worldPosition: { x: newFrameX, y: newFrameY },
+    held: false
+  });
+
+  updateItemDrawPosition(item);
+  updateItemsArray(item);
+  drawAll(); // Ensure UI updates immediately
+};
+
+const findItemContainer = (item, itemList) => {
+  // Check inside each item's 'contents' array (if it exists)
+  for (const container of itemList) {
+    if (Array.isArray(container.contents)) {
+      const found = container.contents?.includes(item) && container;
+      if (found) return found;
+    };
+  };
+  
+  return null; // If not found in any array
+};
+
+// Check valid areas
+const isMouseOnCanvas = (x, y) => (
+  Number.isFinite(x) && Number.isFinite(y) &&
+  x >= 0 && x < canvas.width &&
+  y >= 0 && y < canvas.height
+);
+
+const isCursorOverItem = (item, offsetX, offsetY, size = 64) => {
   return (
-    item.worldPosition.x >= visibleStartX &&
-    item.worldPosition.x <= visibleEndX &&
-    item.worldPosition.y >= visibleStartY &&
-    item.worldPosition.y <= visibleEndY
+    offsetX >= item.drawPosition.x &&
+    offsetX <= item.drawPosition.x + size &&
+    offsetY >= item.drawPosition.y &&
+    offsetY <= item.drawPosition.y + size
   );
 };
 
-// const isItemInRange = (item) => {
-//   const playerFrameX = player.data.details.location.x;
-//   const playerFrameY = player.data.details.location.y;
+const isInRangeOfPlayer = (item) => {
+  const playerFrameX = player.data.details.location.x;
+  const playerFrameY = player.data.details.location.y;
 
-//   const dx = Math.abs(item.worldPosition.x - playerFrameX);
-//   const dy = Math.abs(item.worldPosition.y - playerFrameY);
-//   if (dx <= 1 && dy <=1) console.log('inrange')
-//   return dx <= 1 && dy <= 1; // Ensures the item is in the player's frame or an adjacent frame
-// };
+  const dx = item.worldPosition && Math.abs(item.worldPosition.x - playerFrameX);
+  const dy = item.worldPosition && Math.abs(item.worldPosition.y - playerFrameY);
+  
+  return dx <= 1 && dy <= 1; // Ensures the item is in the player's frame or an adjacent frame
+};
 
-// const updateItemDrawPosition = (item) => {
-//   const visibleStartX = player.data.details.location.x - Math.floor(screen.frames.col / 2);
-//   const visibleStartY = player.data.details.location.y - Math.floor(screen.frames.row / 2);
+const isInRenderArea = (item) => {
+  // Ensure worldPosition exists and has valid numbers for x and y
+  if (
+    !item.worldPosition || 
+    typeof item.worldPosition.x !== 'number' || 
+    typeof item.worldPosition.y !== 'number'
+  ) {
+    return false;
+  };
 
-//   item.drawPosition.x = (item.worldPosition.x - visibleStartX) * 64;
-//   item.drawPosition.y = (item.worldPosition.y - visibleStartY) * 64;
-// };
+  const { x, y } = item.worldPosition;
+  const playerX = player.data.details.location.x;
+  const playerY = player.data.details.location.y;
 
-// const handleMouseMove = (e) => {
-//   inGameItems.forEach(item => {
-//     if (
-//       e.offsetX >= item.drawX &&
-//       e.offsetX <= item.drawX + 64 &&
-//       e.offsetY >= item.drawY &&
-//       e.offsetY <= item.drawY + 64 &&
-//       isItemInRange(item)
-//     ) {
-//       canvas.style.cursor = 'grab';
-//     } else {
-//       canvas.style.cursor = 'default';
-//     };
-//   });
-// };
+  // Calculate the render area's boundaries
+  const startX = playerX - Math.floor(renderArea.size.col / 2);
+  const endX = playerX + Math.floor(renderArea.size.col / 2); 
+  const startY = playerY - Math.floor(renderArea.size.row / 2);
+  const endY = playerY + Math.floor(renderArea.size.row / 2);
 
-// const handleMouseDown = (e) => {
-//   inGameItems.forEach(item => {
-//     if (
-//       e.offsetX >= item.drawPosition.x &&
-//       e.offsetX <= item.drawPosition.x + 64 &&
-//       e.offsetY >= item.drawPosition.y &&
-//       e.offsetY <= item.drawPosition.y + 64 &&
-//       isItemInRange(item)
-//     ) {
-//       item.isBeingDragged = true;
-//       canvas.style.cursor = 'grabbing';
-//     };
-//   });
-// };
+  // Check if the item is within the render area
+  return x >= startX && x <= endX && y >= startY && y <= endY;
+};
 
-// const handleMouseUp = (e) => {
-//   inGameItems.forEach(item => {
-//     if (item.isBeingDragged) {
-//       const newFrameX = player.data.details.location.x + Math.floor((e.offsetX - 384) / 64);
-//       const newFrameY = player.data.details.location.y + Math.floor((e.offsetY - 320) / 64);
+const isInEquipArea = (item) => {
+  const { x, y } = item.drawPosition;
+  
+  return Object.values(equipSlots).some(slot =>
+    x === slot.x && y === slot.y && uiState === 'inventory'
+  );
+};
 
-//       if (isItemInRange({ worldFrame: { x: newFrameX, y: newFrameY } })) {
-//         item.worldFrame.x = newFrameX;
-//         item.worldFrame.y = newFrameY;
-//       }
-//       item.isBeingDragged = false;
-//       updateItemDrawPosition(item);
-//       canvas.style.cursor = 'default';
-//     };
-//   });
-// };
+const isInInventoryArea = (item) => {
+  const slotSize = 32; // Assuming each inventory slot is 32x32 pixels
+  const slotsPerRow = 6;
 
-// handle player movement -------------------------------------------------------
-const tileSize = 64;
-const centerX = 384;
-const centerY = 320;
+  // First inventory area
+  const firstStartX = 832;
+  const firstStartY = 288;
+  const firstSlots = inventory.one.item?.stats?.slots ?? 0; // Check available slots
 
+  // Second inventory area
+  const secondStartX = 832;
+  const secondStartY = 448;
+  const secondSlots = inventory.two.item?.stats?.slots ?? 0; // Check available slots
+
+  const isInSlot = (startX, startY, slots, itemX, itemY) => {
+    for (let i = 0; i < slots; i++) {
+      const row = Math.floor(i / slotsPerRow);
+      const col = i % slotsPerRow;
+
+      const slotX = startX + col * slotSize;
+      const slotY = startY + row * slotSize;
+
+      if (itemX >= slotX && itemX < slotX + slotSize &&
+          itemY >= slotY && itemY < slotY + slotSize) {
+        return true; // Item is within this slot
+      }
+    }
+    return false;
+  };
+
+  return isInSlot(firstStartX, firstStartY, firstSlots, item.x, item.y) ||
+         isInSlot(secondStartX, secondStartY, secondSlots, item.x, item.y);
+};
+
+// Mouse Event Handlers
+const handleMouseMove = (e) => {
+  const { offsetX, offsetY } = e;
+
+  // Check for UI interactions first
+  const uiCursor = handleUiStates(e);
+  if (uiCursor) {
+    canvas.style.cursor = uiCursor;
+    return;
+  }
+
+  // Default cursor state
+  canvas.style.cursor = "crosshair";
+
+  // If an item is held, update its position and cursor state
+  if (heldItem) {
+    canvas.style.cursor = "grabbing";
+    return;
+  }
+
+  // Update hover states for in-game items
+  if (updateItemHoverState(offsetX, offsetY)) return;
+};
+
+const handleMouseDown = (e) => {
+  if (e.button !== 0) return; // Left click only
+
+  // Ensure only one hovered item
+  clearHoverStates();
+  const { offsetX, offsetY } = e;
+  updateItemHoverState(offsetX, offsetY);
+
+  // Find hovered item to hold
+  const hoveredItem = inGameItems.find(item => item.hover);
+
+  // Ensure a valid item is found and prevent holding multiple items
+  if (hoveredItem && !heldItem) {
+    hoveredItem.held = true;
+    hoveredItem.hover = false;
+    hoveredItem.lastValidPosition = { ...hoveredItem.drawPosition };
+    heldItem = hoveredItem;
+    canvas.style.cursor = "grabbing";
+  }
+};
+
+const handleMouseUp = (e) => {
+  if (!heldItem) return;
+
+  const { offsetX, offsetY } = e;
+  const newFrameX = player.data.details.location.x + Math.floor((offsetX - 384) / 64);
+  const newFrameY = player.data.details.location.y + Math.floor((offsetY - 320) / 64);
+
+  // Check valid drop locations
+  const inRenderArea = offsetX >= 0 && offsetX < 832 && offsetY >= 0 && offsetY < 704;
+
+  const inEquipSlot = Object.keys(equipSlots).find(slot => {
+    const { x, y } = equipSlots[slot];
+    return offsetX >= x && offsetX < x + 64 && offsetY >= y && offsetY < y + 64 ? slot : null;
+  });
+
+  const inFirstInventory = 
+    offsetX >= inventorySlots.primary.slots.x && 
+    offsetX < inventorySlots.primary.slots.x + inventorySlots.primary.slots.width && 
+    offsetY >= inventorySlots.primary.slots.y && 
+    offsetY < inventorySlots.primary.slots.y + inventorySlots.primary.slots.height;
+
+  const inFirstInventoryExpanded = 
+    offsetX >= inventorySlots.primary.slots.x && 
+    offsetX < inventorySlots.primary.slots.x + inventorySlots.primary.slots.width && 
+    offsetY >= inventorySlots.primary.slots.y && 
+    offsetY < inventorySlots.primary.slots.expandedHeight;
+
+  const inSecondInventory = 
+    offsetX >= inventorySlots.secondary.slots.x && 
+    offsetX < inventorySlots.secondary.slots.x + inventorySlots.secondary.slots.width && 
+    offsetY >= inventorySlots.secondary.slots.y && 
+    offsetY < inventorySlots.secondary.slots.y + inventorySlots.secondary.slots.height;
+
+  // Handle inventory interactions
+  if (uiState === 'inventory') {
+    if (inEquipSlot) {
+      moveToEquip(heldItem, inEquipSlot);
+      console.log(heldItem, ' moved to Equip Area');
+    } else if ((inFirstInventoryExpanded && inventory.one.open && !inventory.two.open) || (inFirstInventory && inventory.one.open)) {
+      moveToInventory(heldItem, inventory.one.item);
+      console.log(heldItem, ' in First Inventory');
+    } else if (inSecondInventory && inventory.two.open) {
+      moveToInventory(heldItem, inventory.two.item);
+      console.log(heldItem, ' in Second Inventory');
+    }
+  }
+
+  // Handle moving between inventory and equip slots
+  if (heldItem.category === 'inventory' && inEquipSlot) {
+    moveToEquip(heldItem, inEquipSlot);
+    console.log(heldItem, ' equipped');
+  } 
+
+  // Handle rendering area drop
+  if (inRenderArea) {
+    moveToRenderArea(heldItem, newFrameX, newFrameY);
+  } else {
+    resetItemPosition(heldItem, lastValidPosition);
+  }
+
+  // Clear held state
+  heldItem = null;
+  canvas.style.cursor = "crosshair";
+  drawAll();
+};
+
+const handleRightClick = (e) => {
+  e.preventDefault(); // Prevents the default right-click context menu
+
+  const { offsetX, offsetY } = e;
+  const item = inGameItems.find(item => isCursorOverItem(item, offsetX, offsetY));
+
+  if (!item || !item.contents) return; // Only proceed if the item has a 'content' property
+  
+  if (uiState === 'inventory') {
+    if(isInRangeOfPlayer(item) || player.data.details.equipped.back === item) {
+      if (!inventory.one.item) {
+        inventory.one.item = item;
+        inventory.one.open = true;
+        inventory.expanded = true;
+      } else if (item !== inventory.one.item && !inventory.two.item) {
+        inventory.two.item = item;
+        inventory.two.open = true;
+        inventory.expanded = false;
+      } else if (inventory.one.item === item) {
+        inventory.one.item = null;
+        inventory.one.open = false;
+        inventory.expanded = false;
+    
+        if (inventory.two.item) {
+          inventory.one.item = inventory.two.item;
+          inventory.one.open = inventory.two.open;
+          inventory.two.item = null;
+          inventory.two.open = false;
+          inventory.expanded = true;
+        }
+      } else if (inventory.two.item === item) {
+        inventory.two.item = null;
+        inventory.two.open = false;
+        inventory.expanded = true;
+      };
+      console.log("Inventory state updated:", inventory);
+      drawInventory();
+    };
+  };
+};
+
+// Player movement
 const canMove = (boundaryTiles, newX, newY) => {
   return !boundaryTiles.some(boundary => 
     newX === boundary.dx && newY === boundary.dy
   );
 };
 
+const updateCursorAfterMove = () => {
+  const event = new MouseEvent("mousemove", {
+    clientX: lastMouseX, 
+    clientY: lastMouseY
+  });
+  canvas.dispatchEvent(event);
+};
+
 const playerMove = e => {
-  if (!game.on || chat.open || player.cooldown) return;
+  if (!game.on || chat.on || player.cooldown) return;
 
   const movementOffsets = {
     'w': { x: 0, y: -tileSize },
@@ -389,8 +806,8 @@ const playerMove = e => {
   player.direction = directionSprites[key]; // Always update facing direction
 
   if (e.shiftKey) {
-    // If Shift is held, only change direction, do not move
     drawAll();
+    updateCursorAfterMove(); // Ensure cursor updates even when just turning
     return;
   };
 
@@ -403,7 +820,8 @@ const playerMove = e => {
   };
 
   drawAll();
-  
+  updateCursorAfterMove(); // Simulate mouse movement to update cursor after movement
+
   player.cooldown = true;
   setTimeout(() => player.cooldown = false, player.speed * 1000);
 };
@@ -419,7 +837,8 @@ const handleLogin = async e => {
   const nameInput = document.querySelector('#playername').value.trim();
   const playerName = capitalizeWords(nameInput);
   player.data = resources.createPlayer(playerName);
-  resources.itemData.itemsInGame.length > 0 && inGameItems.push(resources.itemData.itemsInGame);
+  // resources.itemData.itemsInGame.length > 0 && inGameItems.push(resources.itemData.itemsInGame);
+  populateInGameItems();
   
   setTimeout(() => {
     const form = document.querySelector('.form-container');
@@ -430,6 +849,7 @@ const handleLogin = async e => {
 
     document.querySelector('.background').remove();
     document.querySelector('.game-container')?.classList.remove('hidden');
+    canvas.style.cursor = 'crosshair';
     
     // gameLoop();
     drawAll();
@@ -438,18 +858,26 @@ const handleLogin = async e => {
 
 // handle player "logout" -------------------------------------------------------
 const updateLocalPlayerData = () => {
-  const playerToUpdateIndex = resources.playerData.playerlist.findIndex(user => user.id === player.data.id);
-  if (playerToUpdateIndex !== -1) {
-    resources.playerData.playerlist[playerToUpdateIndex] = player.data;
+  // Remove any `null` values from the array
+  resources.playerData.playerlist = resources.playerData.playerlist.filter(user => user !== null);
+
+  const playerIndex = resources.playerData.playerlist.findIndex(user => user.id === player.data.id);
+
+  if (playerIndex !== -1) {
+    resources.playerData.playerlist[playerIndex] = player.data;
   } else {
     console.warn('New player added.');
     resources.playerData.playerlist.push(player.data);
   };
 };
 
-const postPlayerData = async data => {
+const updateLocalItemData = () => {
+  resources.itemData.itemsInGame = inGameItems.map(item => ({ ...item })); // Deep copy
+};
+
+const postGameData = async (url, data) => {
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -458,17 +886,21 @@ const postPlayerData = async data => {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to save player data. Server error.');
-    };
-
-  } catch(error) {
-    console.error('Error saving player data:', error.message);
+      throw new Error('Failed to save game data. Server error.');
+    }
+  } catch (error) {
+    console.error('Error saving game data:', error.message);
   };
 };
 
-const updateAndPostPlayerData = async () => {
+const updateAndPostGameData = async () => {
   updateLocalPlayerData();
-  await postPlayerData(resources.playerData);
+  updateLocalItemData();
+
+  await Promise.all([
+    postGameData(API_URL_PLAYER, resources.playerData),
+    postGameData(API_URL_ITEMS, resources.itemData)
+  ]);
 };
 
 // event listeners --------------------------------------------------------------
@@ -478,23 +910,29 @@ addEventListener("DOMContentLoaded", e => {
   addEventListener('keydown', playerMove);
 
   canvas.addEventListener("mousedown", e => {
+    handleMouseDown(e);
     handleUiStates(e);
-    // handleMouseDown(e);
   });
 
   canvas.addEventListener("mousemove", e => {
+    handleMouseMove(e);
     handleUiStates(e);
-    // handleMouseMove(e);
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
   }); 
 
   canvas.addEventListener("mouseup", e => {
-    // handleMouseUp(e);
+    handleMouseUp(e);
+  });
+
+  canvas.addEventListener("contextmenu", e => {
+    handleRightClick(e);
   });
 
   // window.addEventListener('resize', resizeCanvas);
 
   addEventListener('beforeunload', async (e) => {
-    await updateAndPostPlayerData();
+    await updateAndPostGameData();
   });
 });
 
@@ -512,3 +950,37 @@ function gameLoop() {
   // Call the next frame
   requestAnimationFrame(gameLoop);
 };
+
+/*
+
+make it so that walking away from a bad closes the bag
+add favicon
+when items are thrown onto certain tiles, it should delete the item, and can't throw on collision tiles
+equipped items should increase stats
+inventory behavior
+fix updating json
+depot interaction
+
+modularize code
+fix top layer. The layers aren't correct for every spot...
+fix save, player currently doesn't save accurately
+need to add player.json stats so that equipping items affects stats
+maybe only show skill stat depending on the item(s) that is equipped
+implement npcs, npc behavior, player ui
+chatbox to interact with npcs
+code money behavior
+enemy behavior, attacking and looting
+animations
+health recovery, mana recovery
+spells
+*/
+
+/* 
+function getMousePosition(event) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+};
+*/

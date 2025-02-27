@@ -1,6 +1,3 @@
-
-
-
 export const genusInfo01 = [
   {
     name: 'Mystic Hollow',
