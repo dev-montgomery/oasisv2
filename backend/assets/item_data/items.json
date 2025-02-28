@@ -1,16 +1,68 @@
 {
   "items": [
     {
-      "name": "sword",
-      "type": "mainhand",
+      "name": "canvas bag",
+      "type": "back",
+      "contents": [],
       "stats": {
-        "damage": 10,
-        "weight": 50
+        "slots": 8,
+        "weight": 5
       },
       "rarity": "common",
-      "description": "A proper blade.",
+      "description": "At least it isn't plastic.",
+      "price": 50,
+      "value": 5,
+      "spritePosition": { "x": 0, "y": 0 }
+    },
+    {
+      "name": "backpack",
+      "type": "back",
+      "contents": [],
+      "stats": {
+        "slots": 20,
+        "weight": 5
+      },
+      "rarity": "common",
+      "description": "It's a red backpack.",
+      "value": 150,
+      "spritePosition": { "x": 64, "y": 0 }
+    },
+    {
+      "name": "enchanted backpack",
+      "type": "back",
+      "contents": [],
+      "stats": {
+        "slots": 40,
+        "weight": 0
+      },
+      "rarity": "uncommon",
+      "description": "Somebody... used magic... on a backpack... worth it.",
+      "value": 600,
+      "spritePosition": { "x": 128, "y": 0 }
+    },
+    {
+      "name": "wolf fang necklace",
+      "type": "neck",
+      "stats": {
+        "magic": 1,
+        "weight": 2
+      },
+      "rarity": "common",
+      "description": "Wolf teeth... cool...",
       "value": 100,
-      "spritePosition": { "x": 64, "y": 320 }
+      "spritePosition": { "x": 64, "y": 0 }
+    },
+    {
+      "name": "jeweled pendant",
+      "type": "neck",
+      "stats": {
+        "magic": 6,
+        "weight": 5
+      },
+      "rarity": "uncommon",
+      "description": "A pendant made with an unsual jewel.",
+      "value": 200,
+      "spritePosition": { "x": 64, "y": 64 }
     },
     {
       "name": "pendant",
@@ -25,17 +77,16 @@
       "spritePosition": { "x": 64, "y": 64 }
     },
     {
-      "name": "backpack",
-      "type": "back",
-      "contents": [],
+      "name": "rapier",
+      "type": "mainhand",
       "stats": {
-        "slots": 20,
-        "weight": 5
+        "damage": 10,
+        "weight": 50
       },
       "rarity": "common",
-      "description": "It's a red backpack.",
-      "value": 150,
-      "spritePosition": { "x": 64, "y": 0 }
+      "description": "A proper blade.",
+      "value": 100,
+      "spritePosition": { "x": 64, "y": 320 }
     },
     {
       "name": "targe",

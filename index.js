@@ -457,7 +457,6 @@ const moveToEquip = (item, slot) => {
     const container = findItemContainer(item, inGameItems);
     const index = container.contents.findIndex(curr => curr.id === item.id);
     if (index > -1) container.contents.splice(index, 1);
-    console.log(`removed ${item.name} from inventory to equip section.`)
   };
   
   // Equip new item
@@ -488,15 +487,14 @@ const moveToInventory = (item, container) => {
       container.contents.splice(index, 1);
       container.contents.push(item);
     };
-    
+
     return;
   };
 
   // Remove item from equipped section if applicable
   if (player.data.details.equipped[item.type] === item) {
-    player.data.details.equipped[item.type] = 'empty'; // Proper assignment
-    console.log(`Removed ${item.name} from equip section to inventory.`);
-  }
+    player.data.details.equipped[item.type] = null; // Proper assignment
+  };
 
   // Update item properties
   Object.assign(item, {
@@ -555,7 +553,8 @@ const isMouseOnCanvas = (x, y) => (
   y >= 0 && y < canvas.height
 );
 
-const isCursorOverItem = (item, offsetX, offsetY, size = 64) => {
+const isCursorOverItem = (item, offsetX, offsetY) => {
+  const size = uiState === "inventory" ? 48 : 64; // Adjust size based on UI state
   return (
     offsetX >= item.drawPosition.x &&
     offsetX <= item.drawPosition.x + size &&
@@ -722,7 +721,6 @@ const handleMouseUp = (e) => {
   if (uiState === 'inventory') {
     if (inEquipSlot) {
       moveToEquip(heldItem, inEquipSlot);
-      console.log(heldItem, ' moved to Equip Area');
     } else if ((inFirstInventoryExpanded && inventory.one.open && !inventory.two.open) || (inFirstInventory && inventory.one.open)) {
       moveToInventory(heldItem, inventory.one.item);
       console.log(heldItem, ' in First Inventory');
@@ -735,15 +733,14 @@ const handleMouseUp = (e) => {
   // Handle moving between inventory and equip slots
   if (heldItem.category === 'inventory' && inEquipSlot) {
     moveToEquip(heldItem, inEquipSlot);
-    console.log(heldItem, ' equipped');
-  } 
+  } ;
 
   // Handle rendering area drop
   if (inRenderArea) {
     moveToRenderArea(heldItem, newFrameX, newFrameY);
   } else {
     resetItemPosition(heldItem, lastValidPosition);
-  }
+  };
 
   // Clear held state
   heldItem = null;
@@ -786,7 +783,7 @@ const handleRightClick = (e) => {
         inventory.two.open = false;
         inventory.expanded = true;
       };
-      console.log("Inventory state updated:", inventory);
+
       drawInventory();
     };
   };
